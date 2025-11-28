@@ -16,6 +16,10 @@ export interface FileSystemItem {
   createdAt?: string; // ISO string
   description?: string;
   url?: string;
+  shortcutDetails?: {
+    targetId: string;
+    targetMimeType: string;
+  };
 }
 
 export interface User {

@@ -176,18 +176,6 @@ const App: React.FC = () => {
       finally { setIsLoadingFiles(false); }
   };
 
-  const handleFileClick = (file: FileSystemItem) => {
-    const type = getFileType(file.mimeType);
-    if (type === FileType.FOLDER) {
-        setFolderNameMap(prev => ({...prev, [file.id]: file.name}));
-        setCurrentFolderId(file.id);
-        setSearchQuery('');
-        setSearchResults(null);
-    } else if (type === FileType.VIDEO) {
-        setPlayingFile(file);
-    }
-  };
-
   const handleUpdateHistory = (fileId: string, progress: number, duration: number) => {
     const fileMeta = files.find(f => f.id === fileId) || playingFile;
     setHistory(prev => {
@@ -206,17 +194,67 @@ const App: React.FC = () => {
     });
   };
 
+  const handleFileClick = (file: FileSystemItem) => {
+    // Resolve Shortcut Logic
+    const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
+    // If shortcut, use the target info, otherwise use file info
+    const effectiveId = (isShortcut && file.shortcutDetails) ? file.shortcutDetails.targetId : file.id;
+    const effectiveMimeType = (isShortcut && file.shortcutDetails) ? file.shortcutDetails.targetMimeType : file.mimeType;
+    
+    const type = getFileType(effectiveMimeType);
+
+    if (type === FileType.FOLDER) {
+        // Navigate to the folder (whether it's direct or a shortcut target)
+        setFolderNameMap(prev => ({...prev, [effectiveId]: file.name}));
+        setCurrentFolderId(effectiveId);
+        setSearchQuery('');
+        setSearchResults(null);
+    } else if (type === FileType.VIDEO) {
+        // Check if on Android
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        
+        if (isAndroid) {
+            // FORCE EXTERNAL PLAYER on Android
+            if (!accessToken) return;
+            const videoSrc = `https://www.googleapis.com/drive/v3/files/${effectiveId}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
+            // Explicitly requesting a view intent that most players (like MX) intercept
+            const intentUrl = `intent:${videoSrc}#Intent;type=${effectiveMimeType};S.title=${encodeURIComponent(file.name)};end`;
+            
+            // Mark as watched (timestamp update) even though we can't track progress externally
+            handleUpdateHistory(effectiveId, 0, 0);
+            
+            // Launch Intent
+            window.location.href = intentUrl;
+        } else {
+            // Desktop fallback: Play internal
+            // Construct a playable file object using the resolved target ID/MimeType
+            const playableFile: FileSystemItem = isShortcut ? {
+                ...file,
+                id: effectiveId,
+                mimeType: effectiveMimeType
+            } : file;
+            setPlayingFile(playableFile);
+        }
+    }
+  };
+
   const handleSmartSearch = async () => {
       if (!searchQuery.trim()) return;
       setIsSearching(true);
       try {
           const response = await window.gapi.client.drive.files.list({
               q: `name contains '${searchQuery}' and trashed = false`,
-              fields: 'files(id, name, mimeType, size, createdTime, thumbnailLink, parents)',
+              fields: 'files(id, name, mimeType, size, createdTime, thumbnailLink, parents, shortcutDetails)',
               supportsAllDrives: true, includeItemsFromAllDrives: true
           });
           const searchFiles = response.result.files.map((f: any) => ({
-                id: f.id, parentId: f.parents?.[0]||null, name: f.name, mimeType: f.mimeType, thumbnail: f.thumbnailLink, size: f.size
+                id: f.id, 
+                parentId: f.parents?.[0]||null, 
+                name: f.name, 
+                mimeType: f.mimeType, 
+                thumbnail: f.thumbnailLink, 
+                size: f.size,
+                shortcutDetails: f.shortcutDetails
           }));
           setFiles(searchFiles);
           if (config?.apiKey) {
@@ -324,7 +362,11 @@ const App: React.FC = () => {
                 ) : (
                     <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-2 gap-y-4">
                         {displayItems.map((file) => {
-                            const type = getFileType(file.mimeType);
+                            // Resolve type for display (is it a folder shortcut?)
+                            const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
+                            const effectiveMimeType = (isShortcut && file.shortcutDetails) ? file.shortcutDetails.targetMimeType : file.mimeType;
+                            const type = getFileType(effectiveMimeType);
+
                             // CX Style: Folders are big icons, Files are cards
                             return (
                                 <div key={file.id} onClick={() => handleFileClick(file)} className="flex flex-col items-center text-center group cursor-pointer">
@@ -341,6 +383,12 @@ const App: React.FC = () => {
                                         {type === FileType.VIDEO && file.thumbnail && (
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                                                 <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                            </div>
+                                        )}
+                                        {/* Shortcut Overlay Icon */}
+                                        {isShortcut && (
+                                            <div className="absolute bottom-0 left-0 bg-white/80 rounded-tr p-0.5">
+                                                 <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
                                             </div>
                                         )}
                                     </div>

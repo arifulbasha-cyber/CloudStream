@@ -78,7 +78,7 @@ export const listFiles = async (folderId: string = 'root'): Promise<FileSystemIt
     
     const response = await window.gapi.client.drive.files.list({
       pageSize: 50,
-      fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, thumbnailLink, parents)',
+      fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, thumbnailLink, parents, shortcutDetails)',
       q: `'${folderId}' in parents and trashed = false`,
       orderBy: 'folder, name',
       // These two fields are required to access files in Shared Drives or shared with the user in specific contexts
@@ -96,6 +96,7 @@ export const listFiles = async (folderId: string = 'root'): Promise<FileSystemIt
       thumbnail: f.thumbnailLink,
       size: f.size ? formatBytes(parseInt(f.size)) : undefined,
       createdAt: f.createdTime,
+      shortcutDetails: f.shortcutDetails
     }));
   } catch (err) {
     console.error("Error listing files", err);
@@ -108,7 +109,7 @@ export const listSharedFiles = async (): Promise<FileSystemItem[]> => {
         await waitForGapi();
         const response = await window.gapi.client.drive.files.list({
             pageSize: 50,
-            fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, thumbnailLink, parents)',
+            fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, thumbnailLink, parents, shortcutDetails)',
             q: `sharedWithMe = true and trashed = false`,
             orderBy: 'sharedWithMeTime desc',
             supportsAllDrives: true,
@@ -124,6 +125,7 @@ export const listSharedFiles = async (): Promise<FileSystemItem[]> => {
             thumbnail: f.thumbnailLink,
             size: f.size ? formatBytes(parseInt(f.size)) : undefined,
             createdAt: f.createdTime,
+            shortcutDetails: f.shortcutDetails
         }));
     } catch (err) {
         console.error("Error listing shared files", err);
