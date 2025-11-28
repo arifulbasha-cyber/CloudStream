@@ -5,7 +5,7 @@ import Sidebar from './components/Sidebar';
 import MobileNav from './components/MobileNav';
 import VideoPlayer from './components/VideoPlayer';
 import { performSmartSearch } from './services/geminiService';
-import { initGapi, initGis, requestAccessToken, listFiles, listSharedFiles, getUserInfo, getStorageQuota, formatBytes, setGapiToken } from './services/driveService';
+import { initGapi, nativeSignIn, nativeSignOut, initNativeAuth, listFiles, listSharedFiles, getStorageQuota, formatBytes, setGapiToken } from './services/driveService';
 
 // --- Components ---
 
@@ -78,7 +78,6 @@ const LoginScreen: React.FC<{
           </button>
       )}
 
-      {/* Subtle Settings Trigger */}
       <button onClick={onOpenSettings} className="mt-8 text-slate-600 hover:text-slate-400 p-2">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.43.816 1.035.816 1.73 0 .695-.32 1.3-.816 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
@@ -103,12 +102,9 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<WatchHistoryItem[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [storageQuota, setStorageQuota] = useState<StorageQuota | null>(null);
-
-  // View: files = Local, history = Analyze, favorites = Network
   const [currentView, setCurrentView] = useState<'files' | 'history' | 'favorites'>('files');
   const [playingFile, setPlayingFile] = useState<FileSystemItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<string[] | null>(null);
 
   // --- Init Logic ---
@@ -119,28 +115,24 @@ const App: React.FC = () => {
     const savedConfig = localStorage.getItem('driveConfig');
     let effectiveConfig = APP_CONFIG.CLIENT_ID ? { clientId: APP_CONFIG.CLIENT_ID, apiKey: APP_CONFIG.API_KEY } : (savedConfig ? JSON.parse(savedConfig) : null);
 
+    // Initialize Native Auth with Client ID if available
+    initNativeAuth(effectiveConfig?.clientId);
+
     if (effectiveConfig) {
         setConfig(effectiveConfig);
         const savedToken = localStorage.getItem('accessToken');
         const savedUser = localStorage.getItem('user');
-        const savedExpiry = localStorage.getItem('tokenExpiry');
         
-        // Init services regardless of token status so login flow works
-        initServices(effectiveConfig).then(() => {
-             if (savedToken && savedExpiry && Date.now() < parseInt(savedExpiry) && savedUser) {
+        initGapi(effectiveConfig.apiKey).then(() => {
+             if (savedToken && savedUser) {
                 setAccessToken(savedToken);
                 setGapiToken(savedToken);
                 setUser(JSON.parse(savedUser));
                 setIsDriveReady(true);
-            } else {
-                localStorage.removeItem('accessToken');
             }
-        }).catch(err => {
-            console.error("Failed to init services on load", err);
-        });
+        }).catch(err => console.error(err));
     }
 
-    // Handle Browser Back Button (PopState)
     const handlePopState = (event: PopStateEvent) => {
         if (event.state && event.state.folderId) {
             setCurrentFolderId(event.state.folderId);
@@ -152,37 +144,48 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const initServices = async (cfg: DriveConfig) => {
-      await initGapi(cfg.apiKey);
-      initGis(cfg.clientId, async (res) => {
-          if (res?.access_token) {
-              setAccessToken(res.access_token);
-              setGapiToken(res.access_token);
-              
-              localStorage.setItem('accessToken', res.access_token);
-              localStorage.setItem('tokenExpiry', (Date.now() + (res.expires_in || 3590) * 1000).toString());
-              const u = await getUserInfo(res.access_token);
-              const newUser = { name: u?.name || 'User', email: u?.email || '', picture: u?.picture };
-              setUser(newUser);
-              localStorage.setItem('user', JSON.stringify(newUser));
-              setIsDriveReady(true);
+  const handleLogin = async () => {
+      if (!config) { setShowSettings(true); return; }
+      
+      try {
+          // Re-init with explicit ID just in case
+          initNativeAuth(config.clientId);
+          
+          const response = await nativeSignIn();
+          
+          if (response.authentication.accessToken) {
+            const token = response.authentication.accessToken;
+            const u: User = { 
+                name: response.displayName || response.givenName || 'User',
+                email: response.email,
+                picture: response.imageUrl 
+            };
+            
+            setAccessToken(token);
+            setGapiToken(token);
+            setUser(u);
+            setIsDriveReady(true);
+            
+            localStorage.setItem('accessToken', token);
+            localStorage.setItem('user', JSON.stringify(u));
           }
-      });
-  };
-
-  const handleLogin = () => {
-      if (!config) setShowSettings(true);
-      else requestAccessToken();
+      } catch (e) {
+          console.error("Login failed", e);
+          alert("Login failed. Please check your Client ID configuration.");
+      }
   };
   
   const handleSaveConfig = (newConfig: DriveConfig) => {
       localStorage.setItem('driveConfig', JSON.stringify(newConfig));
       setConfig(newConfig);
       setShowSettings(false);
-      initServices(newConfig).catch(console.error);
+      // Re-initialize services with new config
+      initNativeAuth(newConfig.clientId);
+      initGapi(newConfig.apiKey).catch(console.error);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await nativeSignOut();
     setUser(null);
     setAccessToken(null);
     setGapiToken('');
@@ -192,7 +195,6 @@ const App: React.FC = () => {
     setIsDriveReady(false);
   };
 
-  // Fetch logic
   useEffect(() => {
       if (accessToken && isDriveReady) {
           if (currentView === 'files') {
@@ -245,7 +247,6 @@ const App: React.FC = () => {
     });
   };
 
-  // Navigation Helper
   const navigateToFolder = (id: string, name: string) => {
       setFolderNameMap(prev => ({...prev, [id]: name}));
       window.history.pushState({ folderId: id }, '', `#folder/${id}`);
@@ -266,7 +267,6 @@ const App: React.FC = () => {
 
   const handleSmartSearch = async () => {
       if (!searchQuery.trim()) return;
-      setIsSearching(true);
       try {
           const response = await window.gapi.client.drive.files.list({
               q: `name contains '${searchQuery}' and trashed = false`,
@@ -288,10 +288,8 @@ const App: React.FC = () => {
             setSearchResults(ids.length > 0 ? ids : null);
           }
       } catch (e) { console.error(e); } 
-      finally { setIsSearching(false); }
   };
 
-  // Memoize visible items so we can generate playlists
   const displayItems = useMemo(() => {
     if (currentView === 'history') {
         return history.sort((a,b) => b.timestamp - a.timestamp).map(h => ({
@@ -303,7 +301,6 @@ const App: React.FC = () => {
 
   const handleFileClick = (file: FileSystemItem) => {
     const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
-    
     let effectiveId = file.id;
     let effectiveMimeType = file.mimeType;
 
@@ -317,57 +314,35 @@ const App: React.FC = () => {
     if (type === FileType.FOLDER) {
         navigateToFolder(effectiveId, file.name);
     } else if (type === FileType.VIDEO) {
-        // --- ANDROID FORCE MX PLAYER (UPDATED LOGIC) ---
-        // Checks if running on Android (Browser or WebView)
         if (/Android/i.test(navigator.userAgent) && accessToken) {
-             // SAVE HISTORY: We record the click instantly because external players won't report back.
              handleUpdateHistory(file.id, 0, 0);
 
-             // PLAYLIST GENERATION LOGIC
-             // 1. Find all playble videos in current view
              const videoItems = displayItems.filter(f => {
                  const rawType = (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails) ? f.shortcutDetails.targetMimeType : f.mimeType;
                  return getFileType(rawType) === FileType.VIDEO;
              });
 
-             // 2. Generate M3U8 Playlist Content
-             // Format: #EXTINF:-1,Title \n URL
              let m3uContent = "#EXTM3U\n";
              videoItems.forEach(v => {
                  const vId = (v.mimeType === 'application/vnd.google-apps.shortcut' && v.shortcutDetails) ? v.shortcutDetails.targetId : v.id;
-                 const vName = v.name.replace(/[\r\n]/g, ''); // Sanitize name
-                 // Standard API endpoint with token in URL (Supported by MX Player via Playlist)
+                 const vName = v.name.replace(/[\r\n]/g, '');
                  const vUrl = `https://www.googleapis.com/drive/v3/files/${vId}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
                  m3uContent += `#EXTINF:-1,${vName}\n${vUrl}\n`;
              });
 
-             // 3. Find index of clicked video to start playback there
              const currentIndex = videoItems.findIndex(v => {
                  const vId = (v.mimeType === 'application/vnd.google-apps.shortcut' && v.shortcutDetails) ? v.shortcutDetails.targetId : v.id;
                  return vId === effectiveId;
              });
 
-             // 4. Encode Playlist to Base64 (UTF-8 safe)
              const base64M3u = btoa(unescape(encodeURIComponent(m3uContent)));
-
-             // 5. Construct Intent
-             // Scheme: data
-             // Type: audio/x-mpegurl (Standard M3U MIME)
-             // Extra: i.position={index} (Tells MX Player which video to start with)
-             const intentUrl = `intent:data:audio/x-mpegurl;base64,${base64M3u}#Intent;type=audio/x-mpegurl;i.position=${currentIndex};action=android.intent.action.VIEW;end`;
+             const intentUrl = `intent:data:audio/x-mpegurl;base64,${base64M3u}#Intent;type=audio/x-mpegurl;i.position=${currentIndex};action=android.intent.action.VIEW;scheme=https;end`;
              
              window.location.href = intentUrl;
              return; 
         }
 
-        // --- DESKTOP ---
-        const playableFile: FileSystemItem = {
-            ...file,
-            id: effectiveId,
-            mimeType: effectiveMimeType,
-            name: file.name
-        };
-        
+        const playableFile: FileSystemItem = { ...file, id: effectiveId, mimeType: effectiveMimeType, name: file.name };
         setPlayingFile(playableFile);
     }
   };
@@ -406,7 +381,6 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-[#263238] text-slate-200 overflow-hidden font-sans">
         <Sidebar user={user} currentView={currentView} onChangeView={setCurrentView} onLogout={handleLogout} />
-        
         <main className="flex-1 flex flex-col h-full w-full bg-[#263238] relative">
             <header className="h-14 flex items-center justify-between px-4 bg-[#263238] border-b border-slate-700/50 shadow-sm z-20 pt-safe">
                 <div className="flex items-center space-x-3">
@@ -481,7 +455,6 @@ const App: React.FC = () => {
                             const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
                             const effectiveMimeType = (isShortcut && file.shortcutDetails) ? file.shortcutDetails.targetMimeType : file.mimeType;
                             const type = getFileType(effectiveMimeType);
-                            // Check history for this file
                             const watchedItem = history.find(h => h.fileId === file.id);
 
                             return (
@@ -504,7 +477,6 @@ const App: React.FC = () => {
                                                  <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
                                             </div>
                                         )}
-                                        {/* HISTORY INDICATOR: If file is in history, show an eye or progress bar */}
                                         {watchedItem && (
                                             <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] rounded-full px-1.5 py-0.5 shadow-sm z-10">
                                                 ✓
