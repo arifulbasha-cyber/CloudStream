@@ -7,6 +7,24 @@ import VideoPlayer from './components/VideoPlayer';
 import { performSmartSearch } from './services/geminiService';
 import { initGapi, nativeSignIn, nativeSignOut, initNativeAuth, listFiles, listSharedFiles, getStorageQuota, formatBytes, setGapiToken } from './services/driveService';
 
+/**
+ * Compatibility helper: some auth providers return `displayName` while our `User` type may not declare it.
+ * Use getDisplayName(user) wherever the UI previously accessed user.displayName to avoid TS2339 errors.
+ */
+type UserWithDisplayName = User & {
+  displayName?: string;
+  name?: string;
+  email?: string;
+  picture?: string;
+  imageUrl?: string;
+};
+
+function getDisplayName(user: User | null): string {
+  if (!user) return "Unknown user";
+  const u = user as UserWithDisplayName;
+  return u.displayName ?? u.name ?? u.email ?? "Unknown user";
+}
+
 // --- Components ---
 
 const SettingsModal: React.FC<{ 
@@ -33,11 +51,11 @@ const SettingsModal: React.FC<{
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">Client ID</label>
-                        <input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-500 outline-none" required />
+                        <input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-400 outline-none" />
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">API Key</label>
-                        <input type="text" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-500 outline-none" required />
+                        <input type="text" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-400 outline-none" />
                     </div>
                     <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded shadow-lg">Save</button>
                 </form>
@@ -80,7 +98,7 @@ const LoginScreen: React.FC<{
 
       <button onClick={onOpenSettings} className="mt-8 text-slate-600 hover:text-slate-400 p-2">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.43.816 1.035.816 1.73 0 .695-.32 1.3-.816 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.6.547 1.183.897 1.735" />
           </svg>
       </button>
     </div>
@@ -361,6 +379,10 @@ const App: React.FC = () => {
     };
   }, [storageQuota]);
 
+  // Safe display name for current user (avoids TS errors if User type lacks displayName)
+  const displayName = getDisplayName(user);
+  const userImage = (user as UserWithDisplayName | null)?.picture ?? (user as UserWithDisplayName | null)?.imageUrl ?? null;
+
   if (!user || !accessToken) {
       return (
         <>
@@ -404,7 +426,7 @@ const App: React.FC = () => {
                     <div className="relative">
                         <input 
                             type="text" 
-                            className={`bg-transparent border-b border-transparent focus:border-blue-400 text-white w-24 focus:w-40 transition-all outline-none text-sm placeholder-transparent focus:placeholder-slate-500`} 
+                            className={`bg-transparent border-b border-transparent focus:border-blue-400 text-white w-24 focus:w-40 transition-all outline-none text-sm placeholder-transparent focus:pl-2`} 
                             placeholder="Search"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
@@ -415,12 +437,21 @@ const App: React.FC = () => {
                         </button>
                     </div>
                     <button onClick={() => loadFiles(currentFolderId)} className="text-white">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582M20 20v-5h-.581M4 9v11a1 1 0 001 1h14a1 1 0 001-1V9M8 4h8v5H8z" /></svg>
                     </button>
                     
+                    <div className="hidden md:flex items-center space-x-2 text-slate-300">
+                      {userImage ? (
+                        <img src={userImage} alt="avatar" className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm">{(displayName || "U").charAt(0)}</div>
+                      )}
+                      <span className="text-sm text-white max-w-[140px] truncate">{displayName}</span>
+                    </div>
+
                     <button onClick={handleLogout} className="md:hidden text-slate-300 hover:text-white" title="Sign Out">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15" />
                         </svg>
                     </button>
                 </div>
@@ -477,7 +508,7 @@ const App: React.FC = () => {
                                         )}
                                         {isShortcut && (
                                             <div className="absolute bottom-0 left-0 bg-white/80 rounded-tr p-0.5">
-                                                 <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                                                 <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14M5 12h14" /></svg>
                                             </div>
                                         )}
                                         {watchedItem && (
