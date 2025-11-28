@@ -4,57 +4,65 @@ on:
   push:
     branches:
       - main
-      - master
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'zulu'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-      - name: Build Web Assets
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web App
         run: npm run build
 
-      - name: Add Android Platform
+      - name: Initialize Capacitor Android
         run: npx cap add android
 
       - name: Sync Capacitor
         run: npx cap sync
 
-      - name: Fix Gradlew Permissions
-        run: chmod +x android/gradlew
-
-      - name: Build Debug APK
-        run: cd android && ./gradlew assembleDebug
-
-      - name: 🔑 GET SHA-1 FINGERPRINT
+      - name: Generate Keystore
         run: |
-          echo "========================================================"
-          echo "   COPY THE SHA-1 BELOW FOR GOOGLE CLOUD CONSOLE"
-          echo "========================================================"
-          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep "SHA1:"
-          echo "========================================================"
-          echo "Package Name: com.cloudstream.explorer"
-          echo "========================================================"
+          keytool -genkey -v -keystore release.keystore -alias cloudstream -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=CloudStream, OU=IT, O=CloudStream, L=Unknown, S=Unknown, C=US"
 
-      - name: Upload APK
+      - name: 🔑 PRINT SHA-1 FINGERPRINT
+        run: |
+          echo "--------------------------------------------------------"
+          echo "       COPY THIS SHA-1 FOR GOOGLE CLOUD CONSOLE         "
+          echo "--------------------------------------------------------"
+          keytool -list -v -keystore release.keystore -alias cloudstream -storepass android | grep "SHA1: "
+          echo "--------------------------------------------------------"
+
+      - name: Build APK with Gradle
+        working-directory: ./android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/../release.keystore \
+            -Pandroid.injected.signing.store.password=android \
+            -Pandroid.injected.signing.key.alias=cloudstream \
+            -Pandroid.injected.signing.key.password=android
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-release
+          path: android/app/build/outputs/apk/release/app-release.apk
