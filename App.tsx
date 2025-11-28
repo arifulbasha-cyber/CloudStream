@@ -264,57 +264,6 @@ const App: React.FC = () => {
       }
   };
 
-  const handleFileClick = (file: FileSystemItem) => {
-    const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
-    
-    let effectiveId = file.id;
-    let effectiveMimeType = file.mimeType;
-
-    if (isShortcut && file.shortcutDetails?.targetId) {
-        effectiveId = file.shortcutDetails.targetId;
-        effectiveMimeType = file.shortcutDetails.targetMimeType;
-    }
-    
-    const type = getFileType(effectiveMimeType);
-
-    if (type === FileType.FOLDER) {
-        navigateToFolder(effectiveId, file.name);
-    } else if (type === FileType.VIDEO) {
-        // --- ANDROID FORCE MX PLAYER (UPDATED LOGIC) ---
-        // Checks if running on Android (Browser or WebView)
-        if (/Android/i.test(navigator.userAgent) && accessToken) {
-             handleUpdateHistory(file.id, 0, 0);
-
-             const encodedTitle = encodeURIComponent(file.name);
-             const encodedToken = encodeURIComponent(accessToken);
-             
-             // CORRECT INTENT SYNTAX
-             // We removed the 'package' constraint so it opens any app capable (MX Player Pro, VLC, etc.)
-             // 1. Host/Path: www.googleapis.com/drive/v3/files/{ID}
-             // 2. Query: alt=media & access_token={TOKEN} & acknowledgeAbuse=true
-             // 3. Scheme: https
-             
-             const apiPath = `www.googleapis.com/drive/v3/files/${effectiveId}`;
-             const query = `alt=media&access_token=${encodedToken}&acknowledgeAbuse=true`;
-             
-             const intent = `intent://${apiPath}?${query}#Intent;scheme=https;type=${effectiveMimeType};S.title=${encodedTitle};end`;
-             
-             window.location.href = intent;
-             return; 
-        }
-
-        // --- DESKTOP ---
-        const playableFile: FileSystemItem = {
-            ...file,
-            id: effectiveId,
-            mimeType: effectiveMimeType,
-            name: file.name
-        };
-        
-        setPlayingFile(playableFile);
-    }
-  };
-
   const handleSmartSearch = async () => {
       if (!searchQuery.trim()) return;
       setIsSearching(true);
@@ -342,6 +291,7 @@ const App: React.FC = () => {
       finally { setIsSearching(false); }
   };
 
+  // Memoize visible items so we can generate playlists
   const displayItems = useMemo(() => {
     if (currentView === 'history') {
         return history.sort((a,b) => b.timestamp - a.timestamp).map(h => ({
@@ -350,6 +300,76 @@ const App: React.FC = () => {
     }
     return searchResults ? files.filter(f => searchResults.includes(f.id)) : files;
   }, [files, searchResults, currentView, history]);
+
+  const handleFileClick = (file: FileSystemItem) => {
+    const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
+    
+    let effectiveId = file.id;
+    let effectiveMimeType = file.mimeType;
+
+    if (isShortcut && file.shortcutDetails?.targetId) {
+        effectiveId = file.shortcutDetails.targetId;
+        effectiveMimeType = file.shortcutDetails.targetMimeType;
+    }
+    
+    const type = getFileType(effectiveMimeType);
+
+    if (type === FileType.FOLDER) {
+        navigateToFolder(effectiveId, file.name);
+    } else if (type === FileType.VIDEO) {
+        // --- ANDROID FORCE MX PLAYER (UPDATED LOGIC) ---
+        // Checks if running on Android (Browser or WebView)
+        if (/Android/i.test(navigator.userAgent) && accessToken) {
+             handleUpdateHistory(file.id, 0, 0);
+
+             // PLAYLIST GENERATION LOGIC
+             // 1. Find all playble videos in current view
+             const videoItems = displayItems.filter(f => {
+                 const rawType = (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails) ? f.shortcutDetails.targetMimeType : f.mimeType;
+                 return getFileType(rawType) === FileType.VIDEO;
+             });
+
+             // 2. Generate M3U8 Playlist Content
+             // Format: #EXTINF:-1,Title \n URL
+             let m3uContent = "#EXTM3U\n";
+             videoItems.forEach(v => {
+                 const vId = (v.mimeType === 'application/vnd.google-apps.shortcut' && v.shortcutDetails) ? v.shortcutDetails.targetId : v.id;
+                 const vName = v.name.replace(/[\r\n]/g, ''); // Sanitize name
+                 // Standard API endpoint with token in URL (Supported by MX Player via Playlist)
+                 const vUrl = `https://www.googleapis.com/drive/v3/files/${vId}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
+                 m3uContent += `#EXTINF:-1,${vName}\n${vUrl}\n`;
+             });
+
+             // 3. Find index of clicked video to start playback there
+             const currentIndex = videoItems.findIndex(v => {
+                 const vId = (v.mimeType === 'application/vnd.google-apps.shortcut' && v.shortcutDetails) ? v.shortcutDetails.targetId : v.id;
+                 return vId === effectiveId;
+             });
+
+             // 4. Encode Playlist to Base64 (UTF-8 safe)
+             const base64M3u = btoa(unescape(encodeURIComponent(m3uContent)));
+
+             // 5. Construct Intent
+             // Scheme: data
+             // Type: audio/x-mpegurl (Standard M3U MIME)
+             // Extra: i.position={index} (Tells MX Player which video to start with)
+             const intentUrl = `intent:data:audio/x-mpegurl;base64,${base64M3u}#Intent;type=audio/x-mpegurl;i.position=${currentIndex};action=android.intent.action.VIEW;end`;
+             
+             window.location.href = intentUrl;
+             return; 
+        }
+
+        // --- DESKTOP ---
+        const playableFile: FileSystemItem = {
+            ...file,
+            id: effectiveId,
+            mimeType: effectiveMimeType,
+            name: file.name
+        };
+        
+        setPlayingFile(playableFile);
+    }
+  };
 
   const storageStats = useMemo(() => {
     if (!storageQuota) return { percent: 0, used: '0 GB', total: '15 GB' };
