@@ -293,16 +293,18 @@ const App: React.FC = () => {
              const encodedTitle = encodeURIComponent(file.name);
              const encodedToken = encodeURIComponent(accessToken);
              
-             // Construct API stream URL (most robust for seeking support)
+             // Construct API stream URL
+             // NOTE: We MUST include the access_token in the URL.
+             // Using "Authorization" headers via S.headers often FAILS on redirect (400/403)
+             // because the Google Drive API redirects to a Googleusercontent CDN which 
+             // rejects custom Authorization headers on signed URLs.
              const streamSrc = `https://www.googleapis.com/drive/v3/files/${effectiveId}?alt=media&access_token=${encodedToken}&acknowledgeAbuse=true`;
-             
-             // Explicitly add Authorization header to Intent extras to help buffering
-             const headers = `Authorization: Bearer ${accessToken}`;
              
              // Intent construction
              // package=com.mxtech.videoplayer.ad targets the Free version specifically.
-             // S.headers supplies auth for players that respect it.
-             const intent = `intent:${streamSrc}#Intent;package=com.mxtech.videoplayer.ad;action=android.intent.action.VIEW;type=${effectiveMimeType};S.title=${encodedTitle};S.headers=${encodeURIComponent(headers)};end`;
+             // We REMOVE S.headers to avoid the redirect issue.
+             // S.filename provides a hint for the player title.
+             const intent = `intent:${streamSrc}#Intent;package=com.mxtech.videoplayer.ad;action=android.intent.action.VIEW;type=${effectiveMimeType};S.title=${encodedTitle};S.filename=${encodedTitle};end`;
              
              // Direct navigation triggers the app launch
              window.location.href = intent;
