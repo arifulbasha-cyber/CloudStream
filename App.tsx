@@ -178,6 +178,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isDriveReady, setIsDriveReady] = useState(false); // New Flag to coordinate GAPI readiness
 
   // Drive Data State
   const [files, setFiles] = useState<FileSystemItem[]>([]);
@@ -236,7 +237,9 @@ const App: React.FC = () => {
             } catch (e) { console.error("Bad user data", e); }
             
             // Re-init services silently to ensure GAPI is ready for file fetching
-            initServices(effectiveConfig, false); 
+            initServices(effectiveConfig, false).then(() => {
+                setIsDriveReady(true);
+            });
         } else {
             // Just init services for future login
             initServices(effectiveConfig, false);
@@ -280,6 +283,7 @@ const App: React.FC = () => {
                   };
                   setUser(newUser);
                   localStorage.setItem('user', JSON.stringify(newUser));
+                  setIsDriveReady(true); // Flag ready after login
               }
               setIsAuthLoading(false);
           });
@@ -290,14 +294,11 @@ const App: React.FC = () => {
 
   // Fetch files when folder or auth changes
   useEffect(() => {
-      if (accessToken && currentFolderId && !isSearching) {
-          // Add a small delay on initial load to ensure GAPI is fully ready if we just restored session
-          const timeoutId = setTimeout(() => {
-              loadFiles(currentFolderId);
-          }, 500); 
-          return () => clearTimeout(timeoutId);
+      // Only load files if we have a token, a folder ID, AND GAPI is ready.
+      if (accessToken && currentFolderId && !isSearching && isDriveReady) {
+          loadFiles(currentFolderId);
       }
-  }, [accessToken, currentFolderId, isSearching]);
+  }, [accessToken, currentFolderId, isSearching, isDriveReady]);
 
   const loadFiles = async (folderId: string) => {
       setIsLoadingFiles(true);
@@ -325,6 +326,7 @@ const App: React.FC = () => {
       setAccessToken(null);
       setFiles([]);
       setCurrentFolderId('root');
+      setIsDriveReady(false);
       
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');

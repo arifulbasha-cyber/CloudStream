@@ -62,7 +62,8 @@ export const requestAccessToken = () => {
 };
 
 // Helper function to wait for GAPI init
-const waitForGapi = async (retries = 5, delay = 500): Promise<void> => {
+const waitForGapi = async (retries = 20, delay = 200): Promise<void> => {
+    // We explicitly check for window.gapi.client.drive to ensure the API is loaded
     if (gapiInited && window.gapi?.client?.drive) return;
     if (retries === 0) throw new Error("GAPI unavailable");
     
