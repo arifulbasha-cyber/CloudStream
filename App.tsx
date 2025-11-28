@@ -286,14 +286,15 @@ const App: React.FC = () => {
         navigateToFolder(effectiveId, file.name);
     } else if (type === FileType.VIDEO) {
         // Prepare the file object for playback (using resolved details if it was a shortcut)
-        const playableFile: FileSystemItem = isShortcut ? {
+        const playableFile: FileSystemItem = {
             ...file,
             id: effectiveId,
-            mimeType: effectiveMimeType
-        } : file;
+            mimeType: effectiveMimeType,
+            // If it's a shortcut, use the shortcut's name (user logic preferred)
+            name: file.name
+        };
         
         // Always open the player component. 
-        // We do NOT redirect here because mobile browsers might block it.
         // The VideoPlayer component will handle the "Launcher" UI for mobile.
         setPlayingFile(playableFile);
     }

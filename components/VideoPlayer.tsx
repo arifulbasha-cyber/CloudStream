@@ -15,19 +15,32 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Direct stream URL with abuse acknowledgment
-  const videoSrc = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
+  // --- STREAMING ENDPOINTS ---
+
+  // 1. API Endpoint: Best for HTML5 <video> tag in the browser.
+  // It handles CORS and range requests decently for web.
+  const webSrc = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
+
+  // 2. User Content (UC) Endpoint: Best for External Android Players (MX Player, VLC).
+  // It acts more like a direct file download/stream and often buffers faster.
+  // Note: We append the access token as a query param for compatibility, but the real security works via the Intent Headers below.
+  const ucSrc = `https://drive.google.com/uc?export=download&id=${file.id}&access_token=${accessToken}`;
 
   const isAndroid = /Android/i.test(navigator.userAgent);
 
-  // --- INTENT STRATEGIES ---
-  
-  // 1. Generic View Intent (Best for asking "Which app?")
-  // We use scheme=https explicitly in the intent to ensure it parses the URL correctly.
-  const genericIntent = `intent:${videoSrc}#Intent;action=android.intent.action.VIEW;type=${file.mimeType || 'video/*'};S.title=${encodeURIComponent(file.name)};end`;
+  // --- INTENT GENERATION ---
 
-  // 2. Explicit MX Player Intent (Forces MX Player Free version if installed)
-  const mxPlayerIntent = `intent:${videoSrc}#Intent;package=com.mxtech.videoplayer.ad;type=${file.mimeType || 'video/*'};S.title=${encodeURIComponent(file.name)};end`;
+  // We explicitly pass the Authorization header in the intent.
+  // This is the robust way to let MX Player access private Drive files.
+  const intentHeaders = `Authorization: Bearer ${accessToken}`;
+  const encodedTitle = encodeURIComponent(file.name);
+  const mimeType = file.mimeType || 'video/*';
+
+  // Generic Intent (Let Android choose)
+  const genericIntent = `intent:${ucSrc}#Intent;action=android.intent.action.VIEW;type=${mimeType};S.headers=${intentHeaders};S.title=${encodedTitle};end`;
+
+  // Explicit MX Player Intent
+  const mxPlayerIntent = `intent:${ucSrc}#Intent;package=com.mxtech.videoplayer.ad;type=${mimeType};S.headers=${intentHeaders};S.title=${encodedTitle};end`;
 
   const handleLoadedMetadata = () => {
       setIsLoading(false);
@@ -43,7 +56,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
   };
 
   const copyToClipboard = () => {
-      navigator.clipboard.writeText(videoSrc).then(() => {
+      // Copy the UC link for external players
+      navigator.clipboard.writeText(ucSrc).then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
       });
@@ -134,7 +148,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
                         )}
                     </button>
                     <p className="text-[10px] text-slate-500 mt-2">
-                        Paste this link into MX Player Network Stream if buttons fail.
+                        Paste into MX Player Network Stream if needed.
                     </p>
                 </div>
             </div>
@@ -172,7 +186,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
                             className="w-full max-h-full max-w-6xl aspect-video bg-black focus:outline-none mx-auto"
                             controls
                             autoPlay
-                            src={videoSrc}
+                            src={webSrc}
                             onLoadedMetadata={handleLoadedMetadata}
                             onPause={saveProgress}
                             onError={(e) => {
