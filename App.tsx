@@ -197,9 +197,22 @@ const App: React.FC = () => {
   const handleFileClick = (file: FileSystemItem) => {
     // Resolve Shortcut Logic
     const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
-    // If shortcut, use the target info, otherwise use file info
-    const effectiveId = (isShortcut && file.shortcutDetails) ? file.shortcutDetails.targetId : file.id;
-    const effectiveMimeType = (isShortcut && file.shortcutDetails) ? file.shortcutDetails.targetMimeType : file.mimeType;
+    
+    // Safety check: ensure shortcutDetails exist if it says it is a shortcut
+    let effectiveId = file.id;
+    let effectiveMimeType = file.mimeType;
+
+    if (isShortcut) {
+        if (file.shortcutDetails?.targetId) {
+            effectiveId = file.shortcutDetails.targetId;
+            effectiveMimeType = file.shortcutDetails.targetMimeType;
+        } else {
+            console.warn("Shortcut details missing for", file.name);
+            // Fallback: Try to treat as folder if we can't tell, or just return
+            // But without an ID, we can't navigate.
+            return;
+        }
+    }
     
     const type = getFileType(effectiveMimeType);
 
@@ -210,24 +223,22 @@ const App: React.FC = () => {
         setSearchQuery('');
         setSearchResults(null);
     } else if (type === FileType.VIDEO) {
-        // Check if on Android
-        const isAndroid = /Android/i.test(navigator.userAgent);
+        // Check if on Mobile/Android
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         
-        if (isAndroid) {
-            // FORCE EXTERNAL PLAYER on Android
-            if (!accessToken) return;
+        // Force external player on mobile devices for better performance
+        if (isMobile && accessToken) {
             const videoSrc = `https://www.googleapis.com/drive/v3/files/${effectiveId}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
             // Explicitly requesting a view intent that most players (like MX) intercept
             const intentUrl = `intent:${videoSrc}#Intent;type=${effectiveMimeType};S.title=${encodeURIComponent(file.name)};end`;
             
-            // Mark as watched (timestamp update) even though we can't track progress externally
+            // Mark as watched (timestamp update)
             handleUpdateHistory(effectiveId, 0, 0);
             
-            // Launch Intent
+            // Launch Intent directly
             window.location.href = intentUrl;
         } else {
             // Desktop fallback: Play internal
-            // Construct a playable file object using the resolved target ID/MimeType
             const playableFile: FileSystemItem = isShortcut ? {
                 ...file,
                 id: effectiveId,
