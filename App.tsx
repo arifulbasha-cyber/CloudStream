@@ -26,7 +26,12 @@ const SettingsModal: React.FC<{
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
             <div className="w-full max-w-md bg-[#37474F] rounded-lg p-6 shadow-2xl relative text-slate-200">
                 <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
-                <h2 className="text-xl font-bold text-white mb-4">Settings</h2>
+                <h2 className="text-xl font-bold text-white mb-4">API Configuration</h2>
+                <p className="text-xs text-slate-400 mb-4">
+                    To use this web app, you must provide your own Google Cloud Project credentials. 
+                    Native apps like CX Explorer hide this because they compile keys into the APK. 
+                    Web apps require you to use your own to bypass domain restrictions.
+                </p>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">Client ID</label>
@@ -36,7 +41,7 @@ const SettingsModal: React.FC<{
                         <label className="block text-xs font-medium text-slate-400 mb-1">API Key</label>
                         <input type="text" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-500 outline-none" required />
                     </div>
-                    <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded shadow-lg">Save</button>
+                    <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded shadow-lg">Save & Connect</button>
                 </form>
             </div>
         </div>
@@ -51,32 +56,38 @@ const LoginScreen: React.FC<{
 }> = ({ onLogin, isLoading, onOpenSettings, isConfigured }) => {
   return (
     <div className="min-h-screen bg-[#263238] flex flex-col items-center justify-center p-4">
-      <div className="w-24 h-24 bg-blue-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl">
-         <span className="text-4xl font-bold text-white">CX</span>
+      <div className="w-24 h-24 bg-blue-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-blue-400"></div>
+          <span className="text-4xl font-bold text-white relative z-10">CX</span>
       </div>
       <h1 className="text-2xl font-bold text-white mb-2">CloudStream Explorer</h1>
-      <p className="text-slate-400 mb-8">Secure Drive Access</p>
+      <p className="text-slate-400 mb-8 text-sm">Secure Google Drive Access</p>
       
-      <button
-        onClick={isConfigured ? onLogin : onOpenSettings}
-        disabled={isLoading}
-        className="w-full max-w-xs py-3 bg-white text-slate-900 font-bold rounded shadow-lg flex items-center justify-center space-x-3 active:scale-95 transition-transform"
-      >
-        {isLoading ? <span>Connecting...</span> : isConfigured ? <span>Sign in with Google</span> : <span>Setup API Keys</span>}
-      </button>
-      
-      {!isConfigured && (
-         <button onClick={onOpenSettings} className="mt-4 text-slate-500 text-sm hover:text-white">Configure Manually</button>
-      )}
-      {isConfigured && (
-          <button onClick={onOpenSettings} className="mt-6 text-slate-500 text-xs hover:text-white flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281Z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-              </svg>
-              Settings
+      {isConfigured ? (
+          <button
+            onClick={onLogin}
+            disabled={isLoading}
+            className="w-full max-w-xs py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded shadow-lg flex items-center justify-center space-x-3 active:scale-95 transition-transform"
+          >
+            {isLoading ? <span>Connecting...</span> : <span>Sign in with Google</span>}
+          </button>
+      ) : (
+           <button
+            onClick={onOpenSettings}
+            className="w-full max-w-xs py-3.5 bg-white text-slate-900 font-bold rounded shadow-lg flex items-center justify-center space-x-3 active:scale-95 transition-transform"
+          >
+            <span>Configure API Keys</span>
           </button>
       )}
+      
+      <div className="mt-8 flex gap-4 text-xs text-slate-500">
+          <button onClick={onOpenSettings} className="hover:text-white flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.43.816 1.035.816 1.73 0 .695-.32 1.3-.816 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
+              </svg>
+              Server Settings
+          </button>
+      </div>
     </div>
   );
 }
@@ -122,10 +133,7 @@ const App: React.FC = () => {
         initServices(effectiveConfig).then(() => {
              if (savedToken && savedExpiry && Date.now() < parseInt(savedExpiry) && savedUser) {
                 setAccessToken(savedToken);
-                // CRITICAL: Explicitly set the token for GAPI client on restore.
-                // React state has it, but GAPI client lost it on refresh.
                 setGapiToken(savedToken);
-                
                 setUser(JSON.parse(savedUser));
                 setIsDriveReady(true);
             } else {
@@ -153,7 +161,6 @@ const App: React.FC = () => {
       initGis(cfg.clientId, async (res) => {
           if (res?.access_token) {
               setAccessToken(res.access_token);
-              // Set GAPI token immediately on new login
               setGapiToken(res.access_token);
               
               localStorage.setItem('accessToken', res.access_token);
@@ -173,18 +180,16 @@ const App: React.FC = () => {
   };
   
   const handleSaveConfig = (newConfig: DriveConfig) => {
-      // PERSIST CONFIGURATION
       localStorage.setItem('driveConfig', JSON.stringify(newConfig));
       setConfig(newConfig);
       setShowSettings(false);
-      // Initialize immediately
       initServices(newConfig).catch(console.error);
   };
 
   const handleLogout = () => {
     setUser(null);
     setAccessToken(null);
-    setGapiToken(''); // Clear GAPI token
+    setGapiToken('');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     localStorage.removeItem('tokenExpiry');
@@ -198,7 +203,6 @@ const App: React.FC = () => {
             loadFiles(currentFolderId);
             loadStorageQuota();
           } else if (currentView === 'favorites') {
-              // 'favorites' maps to Network/Shared in our CX theme
               loadSharedFiles();
           }
       }
@@ -248,7 +252,6 @@ const App: React.FC = () => {
   // Navigation Helper
   const navigateToFolder = (id: string, name: string) => {
       setFolderNameMap(prev => ({...prev, [id]: name}));
-      // Push state to history so "Back" button works
       window.history.pushState({ folderId: id }, '', `#folder/${id}`);
       setCurrentFolderId(id);
       setSearchQuery('');
@@ -257,18 +260,15 @@ const App: React.FC = () => {
 
   const handleBackNavigation = () => {
       if (currentFolderId !== 'root') {
-          // If we have history, go back
           if (window.history.state && window.history.state.folderId) {
              window.history.back();
           } else {
-             // Fallback if accessed directly (unlikely) or stack empty
              navigateToFolder('root', 'Main Storage');
           }
       }
   };
 
   const handleFileClick = (file: FileSystemItem) => {
-    // Resolve Shortcut Logic
     const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
     
     let effectiveId = file.id;
@@ -279,39 +279,36 @@ const App: React.FC = () => {
         effectiveMimeType = file.shortcutDetails.targetMimeType;
     }
     
-    // Check if it resolves to a folder
     const type = getFileType(effectiveMimeType);
 
     if (type === FileType.FOLDER) {
         navigateToFolder(effectiveId, file.name);
     } else if (type === FileType.VIDEO) {
-        // --- ANDROID FORCE MX PLAYER ---
+        // --- ANDROID FORCE MX PLAYER (UPDATED LOGIC) ---
         if (/Android/i.test(navigator.userAgent) && accessToken) {
-             // Mark history start
              handleUpdateHistory(file.id, 0, 0);
 
              const encodedTitle = encodeURIComponent(file.name);
              const encodedToken = encodeURIComponent(accessToken);
              
-             // Construct API stream URL
-             // NOTE: We MUST include the access_token in the URL.
-             // Using "Authorization" headers via S.headers often FAILS on redirect (400/403)
-             // because the Google Drive API redirects to a Googleusercontent CDN which 
-             // rejects custom Authorization headers on signed URLs.
-             const streamSrc = `https://www.googleapis.com/drive/v3/files/${effectiveId}?alt=media&access_token=${encodedToken}&acknowledgeAbuse=true`;
+             // CORRECT INTENT SYNTAX
+             // 1. Host/Path: www.googleapis.com/drive/v3/files/{ID}
+             // 2. Query: alt=media & access_token={TOKEN} & acknowledgeAbuse=true
+             // 3. Scheme: https (Passed in #Intent;scheme=https)
+             // This tells Android: "Open https://www.googleapis.com/... using an app that can handle video/*"
              
-             // Intent construction
-             // package=com.mxtech.videoplayer.ad targets the Free version specifically.
-             // We REMOVE S.headers to avoid the redirect issue.
-             // S.filename provides a hint for the player title.
-             const intent = `intent:${streamSrc}#Intent;package=com.mxtech.videoplayer.ad;action=android.intent.action.VIEW;type=${effectiveMimeType};S.title=${encodedTitle};S.filename=${encodedTitle};end`;
+             const apiPath = `www.googleapis.com/drive/v3/files/${effectiveId}`;
+             const query = `alt=media&access_token=${encodedToken}&acknowledgeAbuse=true`;
              
-             // Direct navigation triggers the app launch
+             // We use 'intent://' scheme with 'scheme=https' parameter.
+             // This is the most reliable way to fire intents from Chrome on Android.
+             const intent = `intent://${apiPath}?${query}#Intent;scheme=https;package=com.mxtech.videoplayer.ad;type=${effectiveMimeType};S.title=${encodedTitle};end`;
+             
              window.location.href = intent;
-             return; // Do NOT open the internal player modal
+             return; 
         }
 
-        // --- DESKTOP / NON-ANDROID ---
+        // --- DESKTOP ---
         const playableFile: FileSystemItem = {
             ...file,
             id: effectiveId,
@@ -359,7 +356,6 @@ const App: React.FC = () => {
     return searchResults ? files.filter(f => searchResults.includes(f.id)) : files;
   }, [files, searchResults, currentView, history]);
 
-  // Storage Bar Calculation for CX Dashboard
   const storageStats = useMemo(() => {
     if (!storageQuota) return { percent: 0, used: '0 GB', total: '15 GB' };
     const limit = parseInt(storageQuota.limit || '0');
@@ -371,7 +367,6 @@ const App: React.FC = () => {
     };
   }, [storageQuota]);
 
-  // LOGIN SCREEN RENDER
   if (!user || !accessToken) {
       return (
         <>
@@ -397,7 +392,6 @@ const App: React.FC = () => {
         <Sidebar user={user} currentView={currentView} onChangeView={setCurrentView} onLogout={handleLogout} />
         
         <main className="flex-1 flex flex-col h-full w-full bg-[#263238] relative">
-            {/* CX Style Header */}
             <header className="h-14 flex items-center justify-between px-4 bg-[#263238] border-b border-slate-700/50 shadow-sm z-20">
                 <div className="flex items-center space-x-3">
                     {currentFolderId !== 'root' && currentView === 'files' ? (
@@ -414,7 +408,6 @@ const App: React.FC = () => {
                     </h1>
                 </div>
                 <div className="flex items-center space-x-4">
-                    {/* Search Icon */}
                     <div className="relative">
                         <input 
                             type="text" 
@@ -432,7 +425,6 @@ const App: React.FC = () => {
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                     </button>
                     
-                    {/* Mobile Sign Out */}
                     <button onClick={handleLogout} className="md:hidden text-slate-300 hover:text-white" title="Sign Out">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
@@ -441,7 +433,6 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            {/* CX Dashboard Area (Only on Root/Local view) */}
             {currentView === 'files' && currentFolderId === 'root' && (
                 <div className="bg-[#37474F] p-4 mx-2 mt-2 rounded-lg shadow-md mb-2">
                     <div className="flex justify-between items-end mb-2">
@@ -451,12 +442,11 @@ const App: React.FC = () => {
                         </div>
                         <span className="text-xs text-slate-400">Main Storage</span>
                     </div>
-                    {/* CX Signature Multi-color Bar */}
                     <div className="h-3 w-full bg-[#263238] rounded-full overflow-hidden flex">
-                        <div style={{ width: `${storageStats.percent * 0.5}%` }} className="h-full bg-yellow-500"></div> {/* Images */}
-                        <div style={{ width: `${storageStats.percent * 0.3}%` }} className="h-full bg-blue-500"></div>   {/* Videos */}
-                        <div style={{ width: `${storageStats.percent * 0.1}%` }} className="h-full bg-green-500"></div>  {/* Audio */}
-                        <div style={{ width: `${storageStats.percent * 0.1}%` }} className="h-full bg-red-500"></div>    {/* Other */}
+                        <div style={{ width: `${storageStats.percent * 0.5}%` }} className="h-full bg-yellow-500"></div>
+                        <div style={{ width: `${storageStats.percent * 0.3}%` }} className="h-full bg-blue-500"></div>
+                        <div style={{ width: `${storageStats.percent * 0.1}%` }} className="h-full bg-green-500"></div>
+                        <div style={{ width: `${storageStats.percent * 0.1}%` }} className="h-full bg-red-500"></div>
                     </div>
                     <div className="flex mt-2 space-x-4 text-[10px] text-slate-400">
                          <span className="flex items-center"><div className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>Images</span>
@@ -466,19 +456,16 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            {/* Files Grid */}
             <div className="flex-1 overflow-y-auto p-2 pb-20">
                 {isLoadingFiles ? (
                     <div className="flex justify-center mt-10"><div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div></div>
                 ) : (
                     <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-2 gap-y-4">
                         {displayItems.map((file) => {
-                            // Resolve type for display (is it a folder shortcut?)
                             const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
                             const effectiveMimeType = (isShortcut && file.shortcutDetails) ? file.shortcutDetails.targetMimeType : file.mimeType;
                             const type = getFileType(effectiveMimeType);
 
-                            // CX Style: Folders are big icons, Files are cards
                             return (
                                 <div key={file.id} onClick={() => handleFileClick(file)} className="flex flex-col items-center text-center group cursor-pointer">
                                     <div className="relative mb-1">
@@ -487,16 +474,13 @@ const App: React.FC = () => {
                                                  <img src={file.thumbnail} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt={file.name} />
                                              </div>
                                         ) : (
-                                            // Render correct icon from constants
                                             ICONS[type] || ICONS[FileType.DOCUMENT]
                                         )}
-                                        {/* Play Overlay for Videos */}
                                         {type === FileType.VIDEO && file.thumbnail && (
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                                                 <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                             </div>
                                         )}
-                                        {/* Shortcut Overlay Icon */}
                                         {isShortcut && (
                                             <div className="absolute bottom-0 left-0 bg-white/80 rounded-tr p-0.5">
                                                  <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
@@ -506,9 +490,6 @@ const App: React.FC = () => {
                                     <span className="text-[11px] md:text-xs text-slate-300 line-clamp-2 px-1 leading-tight break-all w-full">
                                         {file.name}
                                     </span>
-                                    {type === FileType.VIDEO && currentView === 'history' && (
-                                        <span className="text-[9px] text-blue-400 mt-0.5">History</span>
-                                    )}
                                 </div>
                             );
                         })}

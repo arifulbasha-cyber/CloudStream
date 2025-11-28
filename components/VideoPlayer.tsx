@@ -14,7 +14,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // API Endpoint: Best for desktop reliability with acknowledgeAbuse=true.
+  // API Endpoint with acknowledgeAbuse for Desktop
   const streamSrc = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
 
   const handleLoadedMetadata = () => {
@@ -67,9 +67,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-red-500 mb-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                 </svg>
-                <p className="text-white text-lg font-medium mb-2">Format Not Supported</p>
+                <p className="text-white text-lg font-medium mb-2">Video Error</p>
                 <p className="text-slate-400 max-w-md text-sm mb-6">
-                    This video format might not play in the browser.
+                    {error}
                 </p>
                 <button 
                     onClick={onClose}
@@ -93,7 +93,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
                     onError={(e) => {
                         console.error("Video Error:", e);
                         setIsLoading(false);
-                        setError("Video failed to play.");
+                        setError("Video failed to play in browser.");
                     }}
                 >
                 Your browser does not support the video tag.
