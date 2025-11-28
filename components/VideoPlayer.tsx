@@ -17,30 +17,27 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
 
   // --- STREAMING ENDPOINTS ---
 
-  // 1. API Endpoint: Best for HTML5 <video> tag in the browser.
-  // It handles CORS and range requests decently for web.
-  const webSrc = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
-
-  // 2. User Content (UC) Endpoint: Best for External Android Players (MX Player, VLC).
-  // It acts more like a direct file download/stream and often buffers faster.
-  // Note: We append the access token as a query param for compatibility, but the real security works via the Intent Headers below.
-  const ucSrc = `https://drive.google.com/uc?export=download&id=${file.id}&access_token=${accessToken}`;
+  // API Endpoint: Best for direct streaming via Intents because it supports 'acknowledgeAbuse=true'.
+  // This bypasses the "Virus Scan Warning" HTML page that breaks external players for large files.
+  const streamSrc = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
 
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   // --- INTENT GENERATION ---
 
-  // We explicitly pass the Authorization header in the intent.
-  // This is the robust way to let MX Player access private Drive files.
-  const intentHeaders = `Authorization: Bearer ${accessToken}`;
   const encodedTitle = encodeURIComponent(file.name);
   const mimeType = file.mimeType || 'video/*';
 
   // Generic Intent (Let Android choose)
-  const genericIntent = `intent:${ucSrc}#Intent;action=android.intent.action.VIEW;type=${mimeType};S.headers=${intentHeaders};S.title=${encodedTitle};end`;
+  // We include the URL directly. Most players prefer the token in the URL query param for Drive.
+  const genericIntent = `intent:${streamSrc}#Intent;action=android.intent.action.VIEW;type=${mimeType};S.title=${encodedTitle};end`;
 
   // Explicit MX Player Intent
-  const mxPlayerIntent = `intent:${ucSrc}#Intent;package=com.mxtech.videoplayer.ad;type=${mimeType};S.headers=${intentHeaders};S.title=${encodedTitle};end`;
+  // We target the specific package to force it.
+  const mxPlayerIntent = `intent:${streamSrc}#Intent;package=com.mxtech.videoplayer.ad;action=android.intent.action.VIEW;type=${mimeType};S.title=${encodedTitle};end`;
+
+  // VLC Intent (Just in case)
+  const vlcIntent = `intent:${streamSrc}#Intent;package=org.videolan.vlc;action=android.intent.action.VIEW;type=${mimeType};S.title=${encodedTitle};end`;
 
   const handleLoadedMetadata = () => {
       setIsLoading(false);
@@ -56,8 +53,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
   };
 
   const copyToClipboard = () => {
-      // Copy the UC link for external players
-      navigator.clipboard.writeText(ucSrc).then(() => {
+      // Copy the robust stream link
+      navigator.clipboard.writeText(streamSrc).then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
       });
@@ -107,26 +104,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
                 <div>
                     <h3 className="text-xl font-bold text-white mb-2">Ready to Play</h3>
                     <p className="text-slate-400 text-xs px-4">
-                        Native player is disabled. Select an external app below.
+                        Select a player below to start streaming.
                     </p>
                 </div>
 
                 <div className="w-full space-y-3">
-                    {/* Primary Option: Generic Intent (Ask Android to find a player) */}
+                    {/* Primary Option: Force MX Player */}
                     <a 
-                        href={genericIntent}
+                        href={mxPlayerIntent}
                         className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-900/30 font-bold text-base flex items-center justify-center space-x-2 active:scale-95 transition-transform"
                     >
                         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        <span>Open in External Player</span>
+                        <span>Open in MX Player</span>
                     </a>
 
-                    {/* Secondary Option: Force MX Player */}
+                    {/* Secondary Option: Generic Intent */}
                     <a 
-                        href={mxPlayerIntent}
+                        href={genericIntent}
                         className="w-full py-3 bg-[#263238] border border-slate-600 text-slate-200 rounded-xl font-medium text-sm flex items-center justify-center space-x-2 active:scale-95 transition-transform"
                     >
-                        <span>Force MX Player</span>
+                        <span>Choose Other App</span>
                     </a>
                 </div>
 
@@ -148,7 +145,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
                         )}
                     </button>
                     <p className="text-[10px] text-slate-500 mt-2">
-                        Paste into MX Player Network Stream if needed.
+                        Use 'Network Stream' in player if intent fails.
                     </p>
                 </div>
             </div>
@@ -186,7 +183,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
                             className="w-full max-h-full max-w-6xl aspect-video bg-black focus:outline-none mx-auto"
                             controls
                             autoPlay
-                            src={webSrc}
+                            src={streamSrc}
                             onLoadedMetadata={handleLoadedMetadata}
                             onPause={saveProgress}
                             onError={(e) => {
