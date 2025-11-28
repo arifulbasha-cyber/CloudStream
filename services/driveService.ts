@@ -61,10 +61,20 @@ export const requestAccessToken = () => {
   tokenClient.requestAccessToken({ prompt: 'consent' });
 };
 
-export const listFiles = async (folderId: string = 'root'): Promise<FileSystemItem[]> => {
-  if (!gapiInited) throw new Error("GAPI not initialized");
+// Helper function to wait for GAPI init
+const waitForGapi = async (retries = 5, delay = 500): Promise<void> => {
+    if (gapiInited && window.gapi?.client?.drive) return;
+    if (retries === 0) throw new Error("GAPI unavailable");
+    
+    await new Promise(r => setTimeout(r, delay));
+    return waitForGapi(retries - 1, delay);
+};
 
+export const listFiles = async (folderId: string = 'root'): Promise<FileSystemItem[]> => {
   try {
+    // Wait for GAPI to be ready if it's currently initializing
+    await waitForGapi();
+    
     const response = await window.gapi.client.drive.files.list({
       pageSize: 50,
       fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, thumbnailLink, parents)',
@@ -96,6 +106,7 @@ export const getUserInfo = async (accessToken: string) => {
                 Authorization: `Bearer ${accessToken}`
             }
         });
+        if (!response.ok) return null;
         return await response.json();
     } catch (e) {
         console.error("Error fetching user info", e);

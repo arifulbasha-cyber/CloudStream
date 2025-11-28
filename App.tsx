@@ -136,7 +136,7 @@ const LoginScreen: React.FC<{
                 ) : (
                     <>
                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-slate-900">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854-.107-1.204l-.527-.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                         </svg>
                         <span>Configure App</span>
@@ -203,10 +203,8 @@ const App: React.FC = () => {
         try { setHistory(JSON.parse(savedHistory)); } catch (e) { console.error(e); }
     }
     
-    // 2. Load Config (Code Constants OR LocalStorage)
+    // 2. Load Config
     const savedConfig = localStorage.getItem('driveConfig');
-    
-    // Priority: Hardcoded config > LocalStorage > Null
     let effectiveConfig: DriveConfig | null = null;
     
     if (APP_CONFIG.CLIENT_ID && APP_CONFIG.API_KEY) {
@@ -222,42 +220,82 @@ const App: React.FC = () => {
 
     if (effectiveConfig) {
         setConfig(effectiveConfig);
-        initServices(effectiveConfig);
+        
+        // 3. Attempt to restore session
+        const savedToken = localStorage.getItem('accessToken');
+        const savedUser = localStorage.getItem('user');
+        const savedExpiry = localStorage.getItem('tokenExpiry');
+        
+        const isTokenValid = savedToken && savedExpiry && Date.now() < parseInt(savedExpiry);
+
+        if (isTokenValid && savedUser) {
+            console.log("Restoring session...");
+            setAccessToken(savedToken);
+            try {
+                setUser(JSON.parse(savedUser));
+            } catch (e) { console.error("Bad user data", e); }
+            
+            // Re-init services silently to ensure GAPI is ready for file fetching
+            initServices(effectiveConfig, false); 
+        } else {
+            // Just init services for future login
+            initServices(effectiveConfig, false);
+            if (savedToken) {
+                 // Token expired
+                 localStorage.removeItem('accessToken');
+                 localStorage.removeItem('user');
+                 localStorage.removeItem('tokenExpiry');
+            }
+        }
     }
   }, []);
 
   const handleConfigSave = async (newConfig: DriveConfig) => {
     setConfig(newConfig);
     localStorage.setItem('driveConfig', JSON.stringify(newConfig));
-    await initServices(newConfig);
+    await initServices(newConfig, true);
     setShowSettings(false);
   };
 
-  const initServices = async (cfg: DriveConfig) => {
+  const initServices = async (cfg: DriveConfig, forceReset: boolean) => {
       try {
           await initGapi(cfg.apiKey);
           initGis(cfg.clientId, async (tokenResponse) => {
               if (tokenResponse && tokenResponse.access_token) {
-                  setAccessToken(tokenResponse.access_token);
-                  const userInfo = await getUserInfo(tokenResponse.access_token);
-                  setUser({
-                      name: userInfo.name,
-                      email: userInfo.email,
-                      picture: userInfo.picture
-                  });
+                  const token = tokenResponse.access_token;
+                  setAccessToken(token);
+                  
+                  // Calculate expiry (default 3590 seconds for safety)
+                  const expiresIn = tokenResponse.expires_in || 3590;
+                  const expiryTime = Date.now() + (expiresIn * 1000);
+                  
+                  localStorage.setItem('accessToken', token);
+                  localStorage.setItem('tokenExpiry', expiryTime.toString());
+
+                  const userInfo = await getUserInfo(token);
+                  const newUser = {
+                      name: userInfo?.name || 'User',
+                      email: userInfo?.email || '',
+                      picture: userInfo?.picture
+                  };
+                  setUser(newUser);
+                  localStorage.setItem('user', JSON.stringify(newUser));
               }
               setIsAuthLoading(false);
           });
       } catch (err) {
           console.error("Failed to init Google Services", err);
-          // Do not reset config immediately on network error, allow user to retry login
       }
   };
 
   // Fetch files when folder or auth changes
   useEffect(() => {
       if (accessToken && currentFolderId && !isSearching) {
-          loadFiles(currentFolderId);
+          // Add a small delay on initial load to ensure GAPI is fully ready if we just restored session
+          const timeoutId = setTimeout(() => {
+              loadFiles(currentFolderId);
+          }, 500); 
+          return () => clearTimeout(timeoutId);
       }
   }, [accessToken, currentFolderId, isSearching]);
 
@@ -287,6 +325,11 @@ const App: React.FC = () => {
       setAccessToken(null);
       setFiles([]);
       setCurrentFolderId('root');
+      
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tokenExpiry');
+
       const token = window.gapi?.client?.getToken();
       if (token) {
           window.google?.accounts?.oauth2?.revoke(token.access_token, () => {

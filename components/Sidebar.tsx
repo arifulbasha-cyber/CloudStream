@@ -27,6 +27,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, currentView, onChangeView, onLo
     )},
   ];
 
+  const initial = user.name ? user.name.charAt(0) : '?';
+  const displayName = user.name || 'User';
+
   return (
     <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-full hidden md:flex">
       <div className="p-6 flex items-center space-x-3">
@@ -65,10 +68,10 @@ const Sidebar: React.FC<SidebarProps> = ({ user, currentView, onChangeView, onLo
         
         <div className="flex items-center space-x-3 mb-4">
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white">
-                {user.name.charAt(0)}
+                {initial}
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user.name}</p>
+                <p className="text-sm font-medium text-white truncate">{displayName}</p>
                 <p className="text-xs text-slate-500 truncate">{user.email}</p>
             </div>
         </div>
