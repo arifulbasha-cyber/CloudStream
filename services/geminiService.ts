@@ -1,13 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { FileSystemItem } from "../types";
 
-export const performSmartSearch = async (query: string, files: FileSystemItem[]): Promise<string[]> => {
-  if (!process.env.API_KEY) {
+export const performSmartSearch = async (query: string, files: FileSystemItem[], apiKey: string): Promise<string[]> => {
+  if (!apiKey) {
     console.warn("No API Key provided");
     return [];
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   // Prepare file context for the model
   const fileContext = files.map(f => ({
