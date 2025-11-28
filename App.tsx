@@ -240,37 +240,22 @@ const App: React.FC = () => {
     }
     
     // Check if it resolves to a folder
-    // Note: getFileType handles the 'application/vnd.google-apps.folder' string check
     const type = getFileType(effectiveMimeType);
 
     if (type === FileType.FOLDER) {
         navigateToFolder(effectiveId, file.name);
     } else if (type === FileType.VIDEO) {
-        // Check if on Mobile/Android
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        // Prepare the file object for playback (using resolved details if it was a shortcut)
+        const playableFile: FileSystemItem = isShortcut ? {
+            ...file,
+            id: effectiveId,
+            mimeType: effectiveMimeType
+        } : file;
         
-        // Force external player on mobile devices for better performance
-        if (isMobile && accessToken) {
-            const videoSrc = `https://www.googleapis.com/drive/v3/files/${effectiveId}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
-            // Explicitly requesting a view intent that most players (like MX) intercept
-            // Defaulting mimeType to video/* if missing to ensure player opens
-            const mime = effectiveMimeType || 'video/*';
-            const intentUrl = `intent:${videoSrc}#Intent;type=${mime};S.title=${encodeURIComponent(file.name)};end`;
-            
-            // Mark as watched (timestamp update)
-            handleUpdateHistory(effectiveId, 0, 0);
-            
-            // Launch Intent directly
-            window.location.href = intentUrl;
-        } else {
-            // Desktop fallback: Play internal
-            const playableFile: FileSystemItem = isShortcut ? {
-                ...file,
-                id: effectiveId,
-                mimeType: effectiveMimeType
-            } : file;
-            setPlayingFile(playableFile);
-        }
+        // Always open the player component. 
+        // We do NOT redirect here because mobile browsers might block it.
+        // The VideoPlayer component will handle the "Launcher" UI for mobile.
+        setPlayingFile(playableFile);
     }
   };
 
