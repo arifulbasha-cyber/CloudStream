@@ -95,7 +95,7 @@ const App: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<string[] | null>(null);
 
-  // --- Init Logic (Same as before) ---
+  // --- Init Logic ---
   useEffect(() => {
     const savedHistory = localStorage.getItem('watchHistory');
     if (savedHistory) try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
@@ -117,6 +117,17 @@ const App: React.FC = () => {
             localStorage.removeItem('accessToken');
         }
     }
+
+    // Handle Browser Back Button (PopState)
+    const handlePopState = (event: PopStateEvent) => {
+        if (event.state && event.state.folderId) {
+            setCurrentFolderId(event.state.folderId);
+        } else {
+            setCurrentFolderId('root');
+        }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const initServices = async (cfg: DriveConfig) => {
@@ -194,34 +205,46 @@ const App: React.FC = () => {
     });
   };
 
+  // Navigation Helper
+  const navigateToFolder = (id: string, name: string) => {
+      setFolderNameMap(prev => ({...prev, [id]: name}));
+      // Push state to history so "Back" button works
+      window.history.pushState({ folderId: id }, '', `#folder/${id}`);
+      setCurrentFolderId(id);
+      setSearchQuery('');
+      setSearchResults(null);
+  };
+
+  const handleBackNavigation = () => {
+      if (currentFolderId !== 'root') {
+          // If we have history, go back
+          if (window.history.state && window.history.state.folderId) {
+             window.history.back();
+          } else {
+             // Fallback if accessed directly (unlikely) or stack empty
+             navigateToFolder('root', 'Main Storage');
+          }
+      }
+  };
+
   const handleFileClick = (file: FileSystemItem) => {
     // Resolve Shortcut Logic
     const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
     
-    // Safety check: ensure shortcutDetails exist if it says it is a shortcut
     let effectiveId = file.id;
     let effectiveMimeType = file.mimeType;
 
-    if (isShortcut) {
-        if (file.shortcutDetails?.targetId) {
-            effectiveId = file.shortcutDetails.targetId;
-            effectiveMimeType = file.shortcutDetails.targetMimeType;
-        } else {
-            console.warn("Shortcut details missing for", file.name);
-            // Fallback: Try to treat as folder if we can't tell, or just return
-            // But without an ID, we can't navigate.
-            return;
-        }
+    if (isShortcut && file.shortcutDetails?.targetId) {
+        effectiveId = file.shortcutDetails.targetId;
+        effectiveMimeType = file.shortcutDetails.targetMimeType;
     }
     
+    // Check if it resolves to a folder
+    // Note: getFileType handles the 'application/vnd.google-apps.folder' string check
     const type = getFileType(effectiveMimeType);
 
     if (type === FileType.FOLDER) {
-        // Navigate to the folder (whether it's direct or a shortcut target)
-        setFolderNameMap(prev => ({...prev, [effectiveId]: file.name}));
-        setCurrentFolderId(effectiveId);
-        setSearchQuery('');
-        setSearchResults(null);
+        navigateToFolder(effectiveId, file.name);
     } else if (type === FileType.VIDEO) {
         // Check if on Mobile/Android
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -230,7 +253,9 @@ const App: React.FC = () => {
         if (isMobile && accessToken) {
             const videoSrc = `https://www.googleapis.com/drive/v3/files/${effectiveId}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
             // Explicitly requesting a view intent that most players (like MX) intercept
-            const intentUrl = `intent:${videoSrc}#Intent;type=${effectiveMimeType};S.title=${encodeURIComponent(file.name)};end`;
+            // Defaulting mimeType to video/* if missing to ensure player opens
+            const mime = effectiveMimeType || 'video/*';
+            const intentUrl = `intent:${videoSrc}#Intent;type=${mime};S.title=${encodeURIComponent(file.name)};end`;
             
             // Mark as watched (timestamp update)
             handleUpdateHistory(effectiveId, 0, 0);
@@ -308,16 +333,16 @@ const App: React.FC = () => {
             <header className="h-14 flex items-center justify-between px-4 bg-[#263238] border-b border-slate-700/50 shadow-sm z-20">
                 <div className="flex items-center space-x-3">
                     {currentFolderId !== 'root' && currentView === 'files' ? (
-                        <button onClick={() => { setCurrentFolderId('root'); setFiles([]); listFiles('root'); }} className="text-white">
+                        <button onClick={handleBackNavigation} className="text-white p-1 hover:bg-slate-700 rounded-full">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                         </button>
                     ) : (
                          <div className="md:hidden w-8 h-8 bg-blue-500 rounded flex items-center justify-center font-bold text-white">CX</div>
                     )}
-                    <h1 className="text-lg font-medium text-white truncate">
+                    <h1 className="text-lg font-medium text-white truncate max-w-[200px]">
                         {currentView === 'history' ? 'Analyze (History)' : 
                          currentView === 'favorites' ? 'Network (Shared)' : 
-                         folderNameMap[currentFolderId]}
+                         folderNameMap[currentFolderId] || 'Folder'}
                     </h1>
                 </div>
                 <div className="flex items-center space-x-4">
@@ -384,7 +409,7 @@ const App: React.FC = () => {
                                     <div className="relative mb-1">
                                         {file.thumbnail ? (
                                              <div className="w-14 h-14 md:w-20 md:h-20 rounded overflow-hidden border border-slate-600 bg-black">
-                                                 <img src={file.thumbnail} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                                 <img src={file.thumbnail} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt={file.name} />
                                              </div>
                                         ) : (
                                             // Render correct icon from constants
