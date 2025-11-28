@@ -13,15 +13,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Direct stream URL with abuse acknowledgment
   const videoSrc = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
 
-  // Android Intent URL for MX Player or other external players
-  // This explicitly asks for type=video/* and passes the title
-  const intentUrl = `intent:${videoSrc}#Intent;type=${file.mimeType || 'video/*'};S.title=${encodeURIComponent(file.name)};end`;
-  
   const isAndroid = /Android/i.test(navigator.userAgent);
+
+  // --- INTENT STRATEGIES ---
+  
+  // 1. Generic View Intent (Best for asking "Which app?")
+  // We use scheme=https explicitly in the intent to ensure it parses the URL correctly.
+  const genericIntent = `intent:${videoSrc}#Intent;action=android.intent.action.VIEW;type=${file.mimeType || 'video/*'};S.title=${encodeURIComponent(file.name)};end`;
+
+  // 2. Explicit MX Player Intent (Forces MX Player Free version if installed)
+  const mxPlayerIntent = `intent:${videoSrc}#Intent;package=com.mxtech.videoplayer.ad;type=${file.mimeType || 'video/*'};S.title=${encodeURIComponent(file.name)};end`;
 
   const handleLoadedMetadata = () => {
       setIsLoading(false);
@@ -36,12 +42,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
     }
   };
 
-  // On Android, we just want to update the history "as if" they watched it, 
-  // since we can't track external player progress easily.
+  const copyToClipboard = () => {
+      navigator.clipboard.writeText(videoSrc).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+      });
+  };
+
+  // On Android, mark history immediately since we can't track external apps
   useEffect(() => {
       if (isAndroid) {
-          onUpdateHistory(file.id, 0, 0); // Mark as accessed
-          setIsLoading(false); // Stop spinner immediately so UI is visible
+          onUpdateHistory(file.id, 0, 0); 
+          setIsLoading(false);
       }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAndroid]);
@@ -73,37 +85,61 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
 
         {/* --- ANDROID LAUNCHER UI --- */}
         {isAndroid ? (
-            <div className="flex flex-col items-center justify-center p-6 text-center space-y-6 max-w-sm w-full">
-                <div className="w-24 h-24 bg-blue-900/50 rounded-2xl flex items-center justify-center border border-blue-500/30">
-                     <svg className="w-12 h-12 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <div className="flex flex-col items-center justify-center p-6 text-center space-y-6 max-w-sm w-full h-full bg-[#1a232e]">
+                <div className="w-24 h-24 bg-blue-900/30 rounded-2xl flex items-center justify-center border border-blue-500/20 shadow-lg shadow-blue-900/10">
+                     <svg className="w-10 h-10 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
                 
                 <div>
-                    <h3 className="text-xl font-bold text-white mb-2">Open Video</h3>
-                    <p className="text-slate-400 text-sm">Choose an external player for the best experience.</p>
+                    <h3 className="text-xl font-bold text-white mb-2">Ready to Play</h3>
+                    <p className="text-slate-400 text-xs px-4">
+                        Native player is disabled. Select an external app below.
+                    </p>
                 </div>
 
-                <a 
-                    href={intentUrl}
-                    className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-900/20 font-bold text-lg flex items-center justify-center space-x-2 active:scale-95 transition-transform"
-                >
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    <span>Play in MX Player</span>
-                </a>
+                <div className="w-full space-y-3">
+                    {/* Primary Option: Generic Intent (Ask Android to find a player) */}
+                    <a 
+                        href={genericIntent}
+                        className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-900/30 font-bold text-base flex items-center justify-center space-x-2 active:scale-95 transition-transform"
+                    >
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <span>Open in External Player</span>
+                    </a>
 
-                <div className="text-xs text-slate-500">
-                    If MX Player is not installed, you can try opening in browser below.
+                    {/* Secondary Option: Force MX Player */}
+                    <a 
+                        href={mxPlayerIntent}
+                        className="w-full py-3 bg-[#263238] border border-slate-600 text-slate-200 rounded-xl font-medium text-sm flex items-center justify-center space-x-2 active:scale-95 transition-transform"
+                    >
+                        <span>Force MX Player</span>
+                    </a>
                 </div>
 
-                <button 
-                   onClick={() => window.open(videoSrc, '_blank')}
-                   className="text-slate-400 hover:text-white underline decoration-slate-600 underline-offset-4"
-                >
-                    Open in Browser / Download
-                </button>
+                {/* Fallback: Copy Link */}
+                <div className="pt-4 w-full border-t border-slate-700/50">
+                    <button 
+                        onClick={copyToClipboard}
+                        className="w-full py-3 text-slate-400 text-xs flex items-center justify-center space-x-2 hover:text-white"
+                    >
+                        {copied ? (
+                            <span className="text-green-400 font-bold">Link Copied!</span>
+                        ) : (
+                            <>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5" />
+                                </svg>
+                                <span>Copy Stream Link</span>
+                            </>
+                        )}
+                    </button>
+                    <p className="text-[10px] text-slate-500 mt-2">
+                        Paste this link into MX Player Network Stream if buttons fail.
+                    </p>
+                </div>
             </div>
         ) : (
-            /* --- DESKTOP PLAYER --- */
+            /* --- DESKTOP PLAYER (Kept for PC users) --- */
             <>
                 {isLoading && !error && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
