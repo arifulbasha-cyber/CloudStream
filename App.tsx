@@ -287,15 +287,22 @@ const App: React.FC = () => {
     } else if (type === FileType.VIDEO) {
         // --- ANDROID FORCE MX PLAYER ---
         if (/Android/i.test(navigator.userAgent) && accessToken) {
-             // Mark history start (since we can't track progress in external app)
+             // Mark history start
              handleUpdateHistory(file.id, 0, 0);
 
              const encodedTitle = encodeURIComponent(file.name);
-             // Use API endpoint with acknowledgeAbuse for reliability
-             const streamSrc = `https://www.googleapis.com/drive/v3/files/${effectiveId}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
+             const encodedToken = encodeURIComponent(accessToken);
              
-             // Force MX Player Intent
-             const intent = `intent:${streamSrc}#Intent;package=com.mxtech.videoplayer.ad;action=android.intent.action.VIEW;type=${effectiveMimeType};S.title=${encodedTitle};end`;
+             // Construct API stream URL (most robust for seeking support)
+             const streamSrc = `https://www.googleapis.com/drive/v3/files/${effectiveId}?alt=media&access_token=${encodedToken}&acknowledgeAbuse=true`;
+             
+             // Explicitly add Authorization header to Intent extras to help buffering
+             const headers = `Authorization: Bearer ${accessToken}`;
+             
+             // Intent construction
+             // package=com.mxtech.videoplayer.ad targets the Free version specifically.
+             // S.headers supplies auth for players that respect it.
+             const intent = `intent:${streamSrc}#Intent;package=com.mxtech.videoplayer.ad;action=android.intent.action.VIEW;type=${effectiveMimeType};S.title=${encodedTitle};S.headers=${encodeURIComponent(headers)};end`;
              
              // Direct navigation triggers the app launch
              window.location.href = intent;
@@ -303,7 +310,6 @@ const App: React.FC = () => {
         }
 
         // --- DESKTOP / NON-ANDROID ---
-        // Prepare the file object for playback (using resolved details if it was a shortcut)
         const playableFile: FileSystemItem = {
             ...file,
             id: effectiveId,
