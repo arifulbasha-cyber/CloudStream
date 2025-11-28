@@ -116,7 +116,9 @@ const App: React.FC = () => {
     let effectiveConfig = APP_CONFIG.CLIENT_ID ? { clientId: APP_CONFIG.CLIENT_ID, apiKey: APP_CONFIG.API_KEY } : (savedConfig ? JSON.parse(savedConfig) : null);
 
     // Initialize Native Auth with Client ID if available
-    initNativeAuth(effectiveConfig?.clientId);
+    if (effectiveConfig?.clientId) {
+        initNativeAuth(effectiveConfig.clientId);
+    }
 
     if (effectiveConfig) {
         setConfig(effectiveConfig);
@@ -336,7 +338,8 @@ const App: React.FC = () => {
              });
 
              const base64M3u = btoa(unescape(encodeURIComponent(m3uContent)));
-             const intentUrl = `intent:data:audio/x-mpegurl;base64,${base64M3u}#Intent;type=audio/x-mpegurl;i.position=${currentIndex};action=android.intent.action.VIEW;scheme=https;end`;
+             // Removed scheme=https which conflicts with data: URI in intents
+             const intentUrl = `intent:data:audio/x-mpegurl;base64,${base64M3u}#Intent;type=audio/x-mpegurl;i.position=${currentIndex};action=android.intent.action.VIEW;end`;
              
              window.location.href = intentUrl;
              return; 
