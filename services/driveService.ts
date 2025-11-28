@@ -80,7 +80,10 @@ export const listFiles = async (folderId: string = 'root'): Promise<FileSystemIt
       pageSize: 50,
       fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, thumbnailLink, parents)',
       q: `'${folderId}' in parents and trashed = false`,
-      orderBy: 'folder, name'
+      orderBy: 'folder, name',
+      // These two fields are required to access files in Shared Drives or shared with the user in specific contexts
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
     });
 
     const files = response.result.files || [];

@@ -12,11 +12,11 @@ interface VideoPlayerProps {
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, accessToken, onClose, onUpdateHistory }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // We construct a direct stream URL using the Drive API endpoint and the access token.
-  // This allows the browser to handle range requests (streaming) natively, 
-  // so playback starts almost instantly.
-  const videoSrc = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${accessToken}`;
+  // added &acknowledgeAbuse=true to bypass the virus scan warning for large files which blocks playback.
+  const videoSrc = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
 
   // Set initial time once metadata is loaded
   const handleLoadedMetadata = () => {
@@ -27,7 +27,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
   };
 
   const saveProgress = () => {
-    if (videoRef.current) {
+    if (videoRef.current && !error) {
         onUpdateHistory(file.id, videoRef.current.currentTime, videoRef.current.duration || 0);
     }
   };
@@ -58,24 +58,46 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
             </button>
         </div>
 
-        {isLoading && (
+        {isLoading && !error && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
                 <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
         )}
 
-        <video
-          ref={videoRef}
-          className="w-full max-h-full max-w-6xl aspect-video bg-black focus:outline-none"
-          controls
-          autoPlay
-          src={videoSrc}
-          onLoadedMetadata={handleLoadedMetadata}
-          onPause={saveProgress}
-          onError={(e) => console.error("Video Error:", e)}
-        >
-          Your browser does not support the video tag.
-        </video>
+        {error && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-4 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-red-500 mb-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                </svg>
+                <p className="text-white text-lg font-medium mb-2">Playback Error</p>
+                <p className="text-slate-400 max-w-md">{error}</p>
+                <button 
+                    onClick={onClose}
+                    className="mt-6 px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg"
+                >
+                    Close Player
+                </button>
+            </div>
+        )}
+
+        {!error && (
+            <video
+            ref={videoRef}
+            className="w-full max-h-full max-w-6xl aspect-video bg-black focus:outline-none"
+            controls
+            autoPlay
+            src={videoSrc}
+            onLoadedMetadata={handleLoadedMetadata}
+            onPause={saveProgress}
+            onError={(e) => {
+                console.error("Video Error:", e);
+                setIsLoading(false);
+                setError("Unable to play this video. The format might not be supported by your browser, or the file is still processing.");
+            }}
+            >
+            Your browser does not support the video tag.
+            </video>
+        )}
     </div>
   );
 };
