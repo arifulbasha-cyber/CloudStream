@@ -24,6 +24,13 @@ export interface User {
   picture?: string;
 }
 
+export interface StorageQuota {
+  limit: string;
+  usage: string;
+  usageInDrive: string;
+  usageInTrash: string;
+}
+
 export interface WatchHistoryItem {
   fileId: string;
   timestamp: number; // Unix timestamp of when it was last watched

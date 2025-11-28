@@ -1,4 +1,4 @@
-import { FileSystemItem } from "../types";
+import { FileSystemItem, StorageQuota } from "../types";
 
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
@@ -103,6 +103,47 @@ export const listFiles = async (folderId: string = 'root'): Promise<FileSystemIt
   }
 };
 
+export const listSharedFiles = async (): Promise<FileSystemItem[]> => {
+    try {
+        await waitForGapi();
+        const response = await window.gapi.client.drive.files.list({
+            pageSize: 50,
+            fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, thumbnailLink, parents)',
+            q: `sharedWithMe = true and trashed = false`,
+            orderBy: 'sharedWithMeTime desc',
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true
+        });
+
+        const files = response.result.files || [];
+        return files.map((f: any) => ({
+            id: f.id,
+            parentId: null, // Shared files often act as roots in this view
+            name: f.name,
+            mimeType: f.mimeType,
+            thumbnail: f.thumbnailLink,
+            size: f.size ? formatBytes(parseInt(f.size)) : undefined,
+            createdAt: f.createdTime,
+        }));
+    } catch (err) {
+        console.error("Error listing shared files", err);
+        throw err;
+    }
+};
+
+export const getStorageQuota = async (): Promise<StorageQuota | null> => {
+    try {
+        await waitForGapi();
+        const response = await window.gapi.client.drive.about.get({
+            fields: 'storageQuota'
+        });
+        return response.result.storageQuota;
+    } catch (e) {
+        console.error("Error fetching storage quota", e);
+        return null;
+    }
+};
+
 export const getUserInfo = async (accessToken: string) => {
     try {
         const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -114,12 +155,13 @@ export const getUserInfo = async (accessToken: string) => {
         return await response.json();
     } catch (e) {
         console.error("Error fetching user info", e);
-        return null;
+        // Return a dummy fallback to prevent app crash if user info fails
+        return { name: 'User', email: '', picture: '' };
     }
 }
 
 // Helper to format bytes
-function formatBytes(bytes: number, decimals = 2) {
+export function formatBytes(bytes: number, decimals = 2) {
   if (!+bytes) return '0 Bytes';
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;

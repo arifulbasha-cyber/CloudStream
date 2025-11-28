@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ICONS, APP_CONFIG } from './constants';
-import { FileSystemItem, FileType, User, WatchHistoryItem, getFileType, DriveConfig } from './types';
+import { FileSystemItem, FileType, User, WatchHistoryItem, getFileType, DriveConfig, StorageQuota } from './types';
 import Sidebar from './components/Sidebar';
 import MobileNav from './components/MobileNav';
 import VideoPlayer from './components/VideoPlayer';
 import { performSmartSearch } from './services/geminiService';
-import { initGapi, initGis, requestAccessToken, listFiles, getUserInfo } from './services/driveService';
+import { initGapi, initGis, requestAccessToken, listFiles, listSharedFiles, getUserInfo, getStorageQuota, formatBytes } from './services/driveService';
 
 // --- Components ---
 
@@ -136,7 +136,7 @@ const LoginScreen: React.FC<{
                 ) : (
                     <>
                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-slate-900">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854-.107-1.204l-.527-.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                         </svg>
                         <span>Configure App</span>
@@ -168,6 +168,7 @@ const App: React.FC = () => {
   const [folderNameMap, setFolderNameMap] = useState<Record<string, string>>({'root': 'My Drive'});
   const [history, setHistory] = useState<WatchHistoryItem[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const [storageQuota, setStorageQuota] = useState<StorageQuota | null>(null);
 
   // View State
   const [currentView, setCurrentView] = useState<'files' | 'history' | 'favorites'>('files');
@@ -279,12 +280,22 @@ const App: React.FC = () => {
       // Only load files if we have a token, a folder ID, AND GAPI is ready.
       if (accessToken && currentFolderId && !isSearching && isDriveReady) {
           loadFiles(currentFolderId);
+          loadStorageQuota();
       }
   }, [accessToken, currentFolderId, isSearching, isDriveReady]);
+
+  const loadStorageQuota = async () => {
+      const quota = await getStorageQuota();
+      if (quota) setStorageQuota(quota);
+  }
 
   const loadFiles = async (folderId: string) => {
       setIsLoadingFiles(true);
       try {
+          // If viewing "Shared", use specific list function
+          // But here we rely on currentFolderId. 
+          // Note: Logic for 'Shared with me' view would typically bypass this or use listSharedFiles
+          // For now, we assume standard folder navigation.
           const driveFiles = await listFiles(folderId);
           setFiles(driveFiles);
       } catch (error) {
@@ -415,6 +426,15 @@ const App: React.FC = () => {
       return [{ id: currentFolderId, name: folderNameMap[currentFolderId] || 'Folder' }];
   }, [currentFolderId, folderNameMap]);
 
+  // Storage calculation for UI
+  const storagePercentage = useMemo(() => {
+      if (!storageQuota) return 0;
+      const limit = parseInt(storageQuota.limit || '0');
+      const usage = parseInt(storageQuota.usage || '0');
+      if (limit === 0) return 0;
+      return Math.min(Math.round((usage / limit) * 100), 100);
+  }, [storageQuota]);
+
   // --- RENDER ---
 
   if (!user || !accessToken) {
@@ -438,7 +458,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden">
+    <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden font-sans">
         <Sidebar 
             user={user} 
             currentView={currentView} 
@@ -452,11 +472,11 @@ const App: React.FC = () => {
             onLogout={handleLogout}
         />
         
-        <main className="flex-1 flex flex-col h-full relative w-full">
+        <main className="flex-1 flex flex-col h-full relative w-full bg-slate-900">
             {/* Header */}
-            <header className="h-16 border-b border-slate-800 flex items-center justify-between px-4 md:px-8 bg-slate-900/50 backdrop-blur-md sticky top-0 z-20">
+            <header className="h-16 flex items-center justify-between px-4 md:px-8 bg-slate-900 sticky top-0 z-20 border-b border-slate-800/50">
                 <div className="flex items-center space-x-2 md:hidden">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white">CS</div>
+                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30">CS</div>
                 </div>
 
                 <div className="flex-1 max-w-2xl mx-4 md:mx-0 relative">
@@ -471,15 +491,15 @@ const App: React.FC = () => {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSmartSearch()}
-                            placeholder="Search in Drive..."
-                            className="block w-full pl-10 pr-12 py-2 border border-slate-700 rounded-full leading-5 bg-slate-800 text-slate-300 placeholder-slate-500 focus:outline-none focus:bg-slate-900 focus:ring-1 focus:ring-blue-500 transition-all"
+                            placeholder="Search files..."
+                            className="block w-full pl-10 pr-12 py-2.5 border border-transparent rounded-xl leading-5 bg-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
                         />
                          <button 
                             onClick={handleSmartSearch}
                             disabled={isSearching}
                             className="absolute inset-y-0 right-0 pr-2 flex items-center"
                         >
-                             <div className={`p-1.5 rounded-full ${searchQuery ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                             <div className={`p-1.5 rounded-full ${searchQuery ? 'bg-blue-600 text-white' : 'bg-transparent text-slate-500'}`}>
                                  {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></div> : 
                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>}
                              </div>
@@ -488,19 +508,47 @@ const App: React.FC = () => {
                 </div>
                 
                  <div className="hidden md:flex items-center space-x-3">
-                    {user.picture && <img src={user.picture} alt="Profile" className="w-8 h-8 rounded-full border border-slate-700" />}
+                    {user.picture && <img src={user.picture} alt="Profile" className="w-9 h-9 rounded-full border-2 border-slate-700 shadow-sm" />}
                 </div>
             </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-8 scroll-smooth">
+                 {/* Storage Dashboard (CX Style) */}
+                 {currentFolderId === 'root' && storageQuota && (
+                     <div className="mb-6 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 shadow-xl border border-slate-700/50 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between">
+                            <div className="mb-4 md:mb-0">
+                                <h2 className="text-lg font-bold text-white mb-1">Storage Analysis</h2>
+                                <p className="text-slate-400 text-xs">Google Drive Usage</p>
+                            </div>
+                            <div className="flex items-end space-x-2">
+                                <span className="text-2xl font-bold text-blue-400">{formatBytes(parseInt(storageQuota.usage))}</span>
+                                <span className="text-sm text-slate-500 mb-1.5">/ {formatBytes(parseInt(storageQuota.limit))}</span>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-4 relative h-3 bg-slate-700/50 rounded-full overflow-hidden">
+                            <div 
+                                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-1000 ease-out"
+                                style={{ width: `${storagePercentage}%` }}
+                            ></div>
+                        </div>
+                        <div className="flex justify-between mt-2 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                            <span>Used: {storagePercentage}%</span>
+                            <span>Free: {100 - storagePercentage}%</span>
+                        </div>
+                     </div>
+                 )}
+
                  {/* Breadcrumbs */}
-                 <div className="flex items-center space-x-2 mb-6 text-sm text-slate-400">
-                    <button onClick={() => { setCurrentFolderId('root'); setFiles([]); }} className="hover:text-white transition-colors">My Drive</button>
+                 <div className="flex items-center space-x-2 mb-4 text-sm text-slate-400 overflow-x-auto no-scrollbar py-1">
+                    <button onClick={() => { setCurrentFolderId('root'); setFiles([]); }} className="hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800">My Drive</button>
                     {breadcrumbs.map((crumb) => (
                         <React.Fragment key={crumb.id}>
-                            <span>/</span>
-                            <span className="text-white font-medium">{crumb.name}</span>
+                            <svg className="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            <span className="text-white font-medium whitespace-nowrap">{crumb.name}</span>
                         </React.Fragment>
                     ))}
                 </div>
@@ -511,35 +559,45 @@ const App: React.FC = () => {
                     </div>
                 ) : filteredFiles.length === 0 ? (
                      <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-                        <p>No files found in this folder</p>
+                        <svg className="w-16 h-16 mb-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" /></svg>
+                        <p>No files found</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                         {filteredFiles.map((file) => {
                              const type = getFileType(file.mimeType);
                              const historyItem = history.find(h => h.fileId === file.id);
                              const progressPercent = historyItem ? (historyItem.progress / historyItem.duration) * 100 : 0;
                              
+                             // CX-Like Color Coding for Icons/Cards
+                             let cardBorderColor = "border-slate-800";
+                             let iconColor = "text-slate-400";
+                             if (type === FileType.FOLDER) { cardBorderColor = "hover:border-yellow-500/50"; iconColor = "text-yellow-400"; }
+                             else if (type === FileType.VIDEO) { cardBorderColor = "hover:border-red-500/50"; iconColor = "text-red-400"; }
+                             else if (type === FileType.IMAGE) { cardBorderColor = "hover:border-purple-500/50"; iconColor = "text-purple-400"; }
+
                              return (
                                 <div 
                                     key={file.id}
                                     onClick={() => handleFileClick(file)}
-                                    className="group relative bg-slate-800 rounded-2xl p-4 border border-slate-800 hover:border-slate-600 hover:bg-slate-800/80 transition-all cursor-pointer shadow-lg shadow-black/20 flex flex-col"
+                                    className={`group relative bg-slate-800/60 rounded-xl p-3 border ${cardBorderColor} hover:bg-slate-800 transition-all cursor-pointer shadow-sm hover:shadow-lg flex flex-col active:scale-95 duration-150`}
                                 >
-                                     <div className="aspect-square w-full rounded-xl bg-slate-900 mb-3 overflow-hidden flex items-center justify-center relative">
+                                     <div className="aspect-[4/3] w-full rounded-lg bg-slate-900/50 mb-3 overflow-hidden flex items-center justify-center relative border border-slate-700/30">
                                         {file.thumbnail ? (
                                              <>
-                                                <img src={file.thumbnail} alt={file.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" referrerPolicy="no-referrer" />
-                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                <img src={file.thumbnail} alt={file.name} className="w-full h-full object-cover transition-opacity duration-300" referrerPolicy="no-referrer" />
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-colors">
                                                     {type === FileType.VIDEO && (
-                                                         <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                         <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
+                                                            <svg className="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                                          </div>
                                                     )}
                                                 </div>
                                              </>
                                         ) : (
-                                            ICONS[type] || ICONS['DOCUMENT']
+                                            <div className={`transform group-hover:scale-110 transition-transform duration-300 ${iconColor}`}>
+                                                {ICONS[type] || ICONS['DOCUMENT']}
+                                            </div>
                                         )}
 
                                         {type === FileType.VIDEO && progressPercent > 0 && (
@@ -549,9 +607,11 @@ const App: React.FC = () => {
                                         )}
                                      </div>
                                      <div className="flex-1 min-w-0">
-                                        <h3 className="text-sm font-medium text-slate-200 truncate group-hover:text-blue-400 transition-colors">{file.name}</h3>
-                                        <div className="flex items-center justify-between mt-1">
-                                            <span className="text-xs text-slate-500">{file.size || 'Folder'}</span>
+                                        <h3 className="text-sm font-medium text-slate-200 truncate group-hover:text-white transition-colors">{file.name}</h3>
+                                        <div className="flex items-center justify-between mt-1.5">
+                                            <span className="text-[10px] text-slate-500 bg-slate-900/50 px-1.5 py-0.5 rounded">{file.size || 'Folder'}</span>
+                                            {/* Type Indicator Dot */}
+                                            <div className={`w-1.5 h-1.5 rounded-full ${type === FileType.FOLDER ? 'bg-yellow-500' : type === FileType.VIDEO ? 'bg-red-500' : 'bg-slate-600'}`}></div>
                                         </div>
                                      </div>
                                 </div>
