@@ -16,7 +16,8 @@ const config: CapacitorConfig = {
   plugins: {
     GoogleAuth: {
       scopes: ["profile", "email", "https://www.googleapis.com/auth/drive.readonly"],
-      clientId: "YOUR_CLIENT_ID_GOES_HERE", // NOTE: In native mode, this is often handled by google-services.json, but good to have here fallback
+      // PASTE YOUR NEW ANDROID CLIENT ID HERE AFTER GENERATING IT IN CONSOLE
+      clientId: "YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com", 
       forceCodeForRefreshToken: true
     }
   }
