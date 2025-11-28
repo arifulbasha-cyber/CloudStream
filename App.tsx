@@ -320,6 +320,7 @@ const App: React.FC = () => {
         // --- ANDROID FORCE MX PLAYER (UPDATED LOGIC) ---
         // Checks if running on Android (Browser or WebView)
         if (/Android/i.test(navigator.userAgent) && accessToken) {
+             // SAVE HISTORY: We record the click instantly because external players won't report back.
              handleUpdateHistory(file.id, 0, 0);
 
              // PLAYLIST GENERATION LOGIC
@@ -480,9 +481,11 @@ const App: React.FC = () => {
                             const isShortcut = file.mimeType === 'application/vnd.google-apps.shortcut';
                             const effectiveMimeType = (isShortcut && file.shortcutDetails) ? file.shortcutDetails.targetMimeType : file.mimeType;
                             const type = getFileType(effectiveMimeType);
+                            // Check history for this file
+                            const watchedItem = history.find(h => h.fileId === file.id);
 
                             return (
-                                <div key={file.id} onClick={() => handleFileClick(file)} className="flex flex-col items-center text-center group cursor-pointer">
+                                <div key={file.id} onClick={() => handleFileClick(file)} className="flex flex-col items-center text-center group cursor-pointer relative">
                                     <div className="relative mb-1">
                                         {file.thumbnail ? (
                                              <div className="w-14 h-14 md:w-20 md:h-20 rounded overflow-hidden border border-slate-600 bg-black">
@@ -499,6 +502,12 @@ const App: React.FC = () => {
                                         {isShortcut && (
                                             <div className="absolute bottom-0 left-0 bg-white/80 rounded-tr p-0.5">
                                                  <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                                            </div>
+                                        )}
+                                        {/* HISTORY INDICATOR: If file is in history, show an eye or progress bar */}
+                                        {watchedItem && (
+                                            <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] rounded-full px-1.5 py-0.5 shadow-sm z-10">
+                                                ✓
                                             </div>
                                         )}
                                     </div>
