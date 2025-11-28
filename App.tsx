@@ -5,7 +5,7 @@ import Sidebar from './components/Sidebar';
 import MobileNav from './components/MobileNav';
 import VideoPlayer from './components/VideoPlayer';
 import { performSmartSearch } from './services/geminiService';
-import { initGapi, initGis, requestAccessToken, listFiles, listSharedFiles, getUserInfo, getStorageQuota, formatBytes } from './services/driveService';
+import { initGapi, initGis, requestAccessToken, listFiles, listSharedFiles, getUserInfo, getStorageQuota, formatBytes, setGapiToken } from './services/driveService';
 
 // --- Components ---
 
@@ -122,6 +122,10 @@ const App: React.FC = () => {
         initServices(effectiveConfig).then(() => {
              if (savedToken && savedExpiry && Date.now() < parseInt(savedExpiry) && savedUser) {
                 setAccessToken(savedToken);
+                // CRITICAL: Explicitly set the token for GAPI client on restore.
+                // React state has it, but GAPI client lost it on refresh.
+                setGapiToken(savedToken);
+                
                 setUser(JSON.parse(savedUser));
                 setIsDriveReady(true);
             } else {
@@ -149,6 +153,9 @@ const App: React.FC = () => {
       initGis(cfg.clientId, async (res) => {
           if (res?.access_token) {
               setAccessToken(res.access_token);
+              // Set GAPI token immediately on new login
+              setGapiToken(res.access_token);
+              
               localStorage.setItem('accessToken', res.access_token);
               localStorage.setItem('tokenExpiry', (Date.now() + (res.expires_in || 3590) * 1000).toString());
               const u = await getUserInfo(res.access_token);
@@ -177,6 +184,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setUser(null);
     setAccessToken(null);
+    setGapiToken(''); // Clear GAPI token
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     localStorage.removeItem('tokenExpiry');

@@ -61,6 +61,13 @@ export const requestAccessToken = () => {
   tokenClient.requestAccessToken({ prompt: 'consent' });
 };
 
+// Explicitly set the token for GAPI client (Required for persistence on refresh)
+export const setGapiToken = (token: string) => {
+    if (typeof window.gapi !== 'undefined' && window.gapi.client) {
+        window.gapi.client.setToken({ access_token: token });
+    }
+};
+
 // Helper function to wait for GAPI init
 const waitForGapi = async (retries = 20, delay = 200): Promise<void> => {
     // We explicitly check for window.gapi.client.drive to ensure the API is loaded
