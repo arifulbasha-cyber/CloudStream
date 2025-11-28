@@ -285,17 +285,32 @@ const App: React.FC = () => {
     if (type === FileType.FOLDER) {
         navigateToFolder(effectiveId, file.name);
     } else if (type === FileType.VIDEO) {
+        // --- ANDROID FORCE MX PLAYER ---
+        if (/Android/i.test(navigator.userAgent) && accessToken) {
+             // Mark history start (since we can't track progress in external app)
+             handleUpdateHistory(file.id, 0, 0);
+
+             const encodedTitle = encodeURIComponent(file.name);
+             // Use API endpoint with acknowledgeAbuse for reliability
+             const streamSrc = `https://www.googleapis.com/drive/v3/files/${effectiveId}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
+             
+             // Force MX Player Intent
+             const intent = `intent:${streamSrc}#Intent;package=com.mxtech.videoplayer.ad;action=android.intent.action.VIEW;type=${effectiveMimeType};S.title=${encodedTitle};end`;
+             
+             // Direct navigation triggers the app launch
+             window.location.href = intent;
+             return; // Do NOT open the internal player modal
+        }
+
+        // --- DESKTOP / NON-ANDROID ---
         // Prepare the file object for playback (using resolved details if it was a shortcut)
         const playableFile: FileSystemItem = {
             ...file,
             id: effectiveId,
             mimeType: effectiveMimeType,
-            // If it's a shortcut, use the shortcut's name (user logic preferred)
             name: file.name
         };
         
-        // Always open the player component. 
-        // The VideoPlayer component will handle the "Launcher" UI for mobile.
         setPlayingFile(playableFile);
     }
   };
