@@ -174,6 +174,15 @@ const App: React.FC = () => {
       initServices(newConfig).catch(console.error);
   };
 
+  const handleLogout = () => {
+    setUser(null);
+    setAccessToken(null);
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('tokenExpiry');
+    setIsDriveReady(false);
+  };
+
   // Fetch logic
   useEffect(() => {
       if (accessToken && isDriveReady) {
@@ -353,7 +362,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-[#263238] text-slate-200 overflow-hidden font-sans">
-        <Sidebar user={user} currentView={currentView} onChangeView={setCurrentView} onLogout={() => { setUser(null); setAccessToken(null); localStorage.removeItem('accessToken'); }} />
+        <Sidebar user={user} currentView={currentView} onChangeView={setCurrentView} onLogout={handleLogout} />
         
         <main className="flex-1 flex flex-col h-full w-full bg-[#263238] relative">
             {/* CX Style Header */}
@@ -389,6 +398,13 @@ const App: React.FC = () => {
                     </div>
                     <button onClick={() => loadFiles(currentFolderId)} className="text-white">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    </button>
+                    
+                    {/* Mobile Sign Out */}
+                    <button onClick={handleLogout} className="md:hidden text-slate-300 hover:text-white" title="Sign Out">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                        </svg>
                     </button>
                 </div>
             </header>
