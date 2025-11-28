@@ -28,9 +28,7 @@ const SettingsModal: React.FC<{
                 <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
                 <h2 className="text-xl font-bold text-white mb-4">API Configuration</h2>
                 <p className="text-xs text-slate-400 mb-4">
-                    To use this web app, you must provide your own Google Cloud Project credentials. 
-                    Native apps like CX Explorer hide this because they compile keys into the APK. 
-                    Web apps require you to use your own to bypass domain restrictions.
+                    Please enter your Google Cloud Project credentials.
                 </p>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
@@ -41,7 +39,7 @@ const SettingsModal: React.FC<{
                         <label className="block text-xs font-medium text-slate-400 mb-1">API Key</label>
                         <input type="text" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-500 outline-none" required />
                     </div>
-                    <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded shadow-lg">Save & Connect</button>
+                    <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded shadow-lg">Save</button>
                 </form>
             </div>
         </div>
@@ -55,39 +53,37 @@ const LoginScreen: React.FC<{
     isConfigured: boolean
 }> = ({ onLogin, isLoading, onOpenSettings, isConfigured }) => {
   return (
-    <div className="min-h-screen bg-[#263238] flex flex-col items-center justify-center p-4">
-      <div className="w-24 h-24 bg-blue-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-blue-400"></div>
-          <span className="text-4xl font-bold text-white relative z-10">CX</span>
+    <div className="min-h-screen bg-[#263238] flex flex-col items-center justify-center p-6 text-center">
+      <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mb-8 shadow-2xl relative overflow-hidden ring-4 ring-blue-500/20">
+          <span className="text-3xl font-bold text-white">CX</span>
       </div>
-      <h1 className="text-2xl font-bold text-white mb-2">CloudStream Explorer</h1>
-      <p className="text-slate-400 mb-8 text-sm">Secure Google Drive Access</p>
+      
+      <h1 className="text-xl font-medium text-white mb-1">Welcome</h1>
+      <p className="text-slate-400 mb-12 text-sm">Sign in to access your cloud storage</p>
       
       {isConfigured ? (
           <button
             onClick={onLogin}
             disabled={isLoading}
-            className="w-full max-w-xs py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded shadow-lg flex items-center justify-center space-x-3 active:scale-95 transition-transform"
+            className="w-full max-w-xs py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded shadow-lg active:scale-95 transition-all flex items-center justify-center"
           >
-            {isLoading ? <span>Connecting...</span> : <span>Sign in with Google</span>}
+            {isLoading ? "Connecting..." : "Sign in with Google"}
           </button>
       ) : (
            <button
             onClick={onOpenSettings}
-            className="w-full max-w-xs py-3.5 bg-white text-slate-900 font-bold rounded shadow-lg flex items-center justify-center space-x-3 active:scale-95 transition-transform"
+            className="w-full max-w-xs py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded shadow-lg active:scale-95 transition-all"
           >
-            <span>Configure API Keys</span>
+            Configure Access
           </button>
       )}
-      
-      <div className="mt-8 flex gap-4 text-xs text-slate-500">
-          <button onClick={onOpenSettings} className="hover:text-white flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.43.816 1.035.816 1.73 0 .695-.32 1.3-.816 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
-              </svg>
-              Server Settings
-          </button>
-      </div>
+
+      {/* Subtle Settings Trigger */}
+      <button onClick={onOpenSettings} className="mt-8 text-slate-600 hover:text-slate-400 p-2">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.43.816 1.035.816 1.73 0 .695-.32 1.3-.816 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
+          </svg>
+      </button>
     </div>
   );
 }
@@ -285,6 +281,7 @@ const App: React.FC = () => {
         navigateToFolder(effectiveId, file.name);
     } else if (type === FileType.VIDEO) {
         // --- ANDROID FORCE MX PLAYER (UPDATED LOGIC) ---
+        // Checks if running on Android (Browser or WebView)
         if (/Android/i.test(navigator.userAgent) && accessToken) {
              handleUpdateHistory(file.id, 0, 0);
 
@@ -292,17 +289,15 @@ const App: React.FC = () => {
              const encodedToken = encodeURIComponent(accessToken);
              
              // CORRECT INTENT SYNTAX
+             // We removed the 'package' constraint so it opens any app capable (MX Player Pro, VLC, etc.)
              // 1. Host/Path: www.googleapis.com/drive/v3/files/{ID}
              // 2. Query: alt=media & access_token={TOKEN} & acknowledgeAbuse=true
-             // 3. Scheme: https (Passed in #Intent;scheme=https)
-             // This tells Android: "Open https://www.googleapis.com/... using an app that can handle video/*"
+             // 3. Scheme: https
              
              const apiPath = `www.googleapis.com/drive/v3/files/${effectiveId}`;
              const query = `alt=media&access_token=${encodedToken}&acknowledgeAbuse=true`;
              
-             // We use 'intent://' scheme with 'scheme=https' parameter.
-             // This is the most reliable way to fire intents from Chrome on Android.
-             const intent = `intent://${apiPath}?${query}#Intent;scheme=https;package=com.mxtech.videoplayer.ad;type=${effectiveMimeType};S.title=${encodedTitle};end`;
+             const intent = `intent://${apiPath}?${query}#Intent;scheme=https;type=${effectiveMimeType};S.title=${encodedTitle};end`;
              
              window.location.href = intent;
              return; 
@@ -392,7 +387,7 @@ const App: React.FC = () => {
         <Sidebar user={user} currentView={currentView} onChangeView={setCurrentView} onLogout={handleLogout} />
         
         <main className="flex-1 flex flex-col h-full w-full bg-[#263238] relative">
-            <header className="h-14 flex items-center justify-between px-4 bg-[#263238] border-b border-slate-700/50 shadow-sm z-20">
+            <header className="h-14 flex items-center justify-between px-4 bg-[#263238] border-b border-slate-700/50 shadow-sm z-20 pt-safe">
                 <div className="flex items-center space-x-3">
                     {currentFolderId !== 'root' && currentView === 'files' ? (
                         <button onClick={handleBackNavigation} className="text-white p-1 hover:bg-slate-700 rounded-full">
