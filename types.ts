@@ -36,6 +36,11 @@ export interface WatchHistoryItem {
   timestamp: number; // Unix timestamp of when it was last watched
   progress: number; // Seconds watched
   duration: number; // Total duration in seconds
+  // Cached metadata so we can display history without fetching from Drive
+  name?: string;
+  mimeType?: string;
+  thumbnail?: string;
+  size?: string;
 }
 
 export interface DriveConfig {
@@ -44,7 +49,8 @@ export interface DriveConfig {
 }
 
 // Helper to map MIME types to our simplified Enum for UI logic
-export const getFileType = (mimeType: string): FileType => {
+export const getFileType = (mimeType: string | undefined): FileType => {
+  if (!mimeType) return FileType.UNKNOWN;
   if (mimeType === 'application/vnd.google-apps.folder') return FileType.FOLDER;
   if (mimeType.startsWith('video/')) return FileType.VIDEO;
   if (mimeType.startsWith('image/')) return FileType.IMAGE;

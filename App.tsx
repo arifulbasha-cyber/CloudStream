@@ -5,7 +5,7 @@ import Sidebar from './components/Sidebar';
 import MobileNav from './components/MobileNav';
 import VideoPlayer from './components/VideoPlayer';
 import { performSmartSearch } from './services/geminiService';
-import { initGapi, initGis, requestAccessToken, listFiles, listSharedFiles, getUserInfo, getStorageQuota, formatBytes } from './services/driveService';
+import { initGapi, initGis, requestAccessToken, listFiles, getUserInfo, getStorageQuota, formatBytes } from './services/driveService';
 
 // --- Components ---
 
@@ -40,7 +40,7 @@ const SettingsModal: React.FC<{
 
                 <h2 className="text-xl font-bold text-white mb-4 flex items-center space-x-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-500">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854-.107-1.204l-.527-.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                     </svg>
                     <span>Developer Settings</span>
@@ -136,7 +136,7 @@ const LoginScreen: React.FC<{
                 ) : (
                     <>
                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-slate-900">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                         </svg>
                         <span>Configure App</span>
@@ -160,7 +160,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [isDriveReady, setIsDriveReady] = useState(false); // New Flag to coordinate GAPI readiness
+  const [isDriveReady, setIsDriveReady] = useState(false);
 
   // Drive Data State
   const [files, setFiles] = useState<FileSystemItem[]>([]);
@@ -177,7 +177,7 @@ const App: React.FC = () => {
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<string[] | null>(null); // IDs of filtered files
+  const [searchResults, setSearchResults] = useState<string[] | null>(null);
 
   // Initialization Logic
   useEffect(() => {
@@ -213,21 +213,17 @@ const App: React.FC = () => {
         const isTokenValid = savedToken && savedExpiry && Date.now() < parseInt(savedExpiry);
 
         if (isTokenValid && savedUser) {
-            console.log("Restoring session...");
             setAccessToken(savedToken);
             try {
                 setUser(JSON.parse(savedUser));
             } catch (e) { console.error("Bad user data", e); }
             
-            // Re-init services silently to ensure GAPI is ready for file fetching
             initServices(effectiveConfig, false).then(() => {
                 setIsDriveReady(true);
             });
         } else {
-            // Just init services for future login
             initServices(effectiveConfig, false);
             if (savedToken) {
-                 // Token expired
                  localStorage.removeItem('accessToken');
                  localStorage.removeItem('user');
                  localStorage.removeItem('tokenExpiry');
@@ -250,8 +246,6 @@ const App: React.FC = () => {
               if (tokenResponse && tokenResponse.access_token) {
                   const token = tokenResponse.access_token;
                   setAccessToken(token);
-                  
-                  // Calculate expiry (default 3590 seconds for safety)
                   const expiresIn = tokenResponse.expires_in || 3590;
                   const expiryTime = Date.now() + (expiresIn * 1000);
                   
@@ -266,7 +260,7 @@ const App: React.FC = () => {
                   };
                   setUser(newUser);
                   localStorage.setItem('user', JSON.stringify(newUser));
-                  setIsDriveReady(true); // Flag ready after login
+                  setIsDriveReady(true);
               }
               setIsAuthLoading(false);
           });
@@ -275,14 +269,15 @@ const App: React.FC = () => {
       }
   };
 
-  // Fetch files when folder or auth changes
+  // Fetch files
   useEffect(() => {
-      // Only load files if we have a token, a folder ID, AND GAPI is ready.
       if (accessToken && currentFolderId && !isSearching && isDriveReady) {
-          loadFiles(currentFolderId);
-          loadStorageQuota();
+          if (currentView === 'files') {
+            loadFiles(currentFolderId);
+            loadStorageQuota();
+          }
       }
-  }, [accessToken, currentFolderId, isSearching, isDriveReady]);
+  }, [accessToken, currentFolderId, isSearching, isDriveReady, currentView]);
 
   const loadStorageQuota = async () => {
       const quota = await getStorageQuota();
@@ -292,10 +287,6 @@ const App: React.FC = () => {
   const loadFiles = async (folderId: string) => {
       setIsLoadingFiles(true);
       try {
-          // If viewing "Shared", use specific list function
-          // But here we rely on currentFolderId. 
-          // Note: Logic for 'Shared with me' view would typically bypass this or use listSharedFiles
-          // For now, we assume standard folder navigation.
           const driveFiles = await listFiles(folderId);
           setFiles(driveFiles);
       } catch (error) {
@@ -324,29 +315,39 @@ const App: React.FC = () => {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
       localStorage.removeItem('tokenExpiry');
-
+      
       const token = window.gapi?.client?.getToken();
       if (token) {
-          window.google?.accounts?.oauth2?.revoke(token.access_token, () => {
-            console.log('Revoked');
-          });
+          window.google?.accounts?.oauth2?.revoke(token.access_token, () => {});
           window.gapi?.client?.setToken('');
       }
   };
 
   const handleUpdateHistory = (fileId: string, progress: number, duration: number) => {
+    // Find metadata from current list or existing history
+    const fileMeta = files.find(f => f.id === fileId) || playingFile;
+
     setHistory(prev => {
         const existingIndex = prev.findIndex(h => h.fileId === fileId);
-        const newItem = { fileId, progress, duration, timestamp: Date.now() };
-        let newHistory;
+        const newItem: WatchHistoryItem = { 
+            fileId, 
+            progress, 
+            duration, 
+            timestamp: Date.now(),
+            // Cache metadata for offline/cached display
+            name: fileMeta?.name || prev[existingIndex]?.name || 'Unknown Video',
+            thumbnail: fileMeta?.thumbnail || prev[existingIndex]?.thumbnail,
+            mimeType: fileMeta?.mimeType || prev[existingIndex]?.mimeType || 'video/mp4',
+            size: fileMeta?.size || prev[existingIndex]?.size
+        };
         
+        let newHistory;
         if (existingIndex >= 0) {
             newHistory = [...prev];
             newHistory[existingIndex] = newItem;
         } else {
             newHistory = [newItem, ...prev];
         }
-        
         localStorage.setItem('watchHistory', JSON.stringify(newHistory));
         return newHistory;
     });
@@ -367,12 +368,10 @@ const App: React.FC = () => {
   const handleSmartSearch = async () => {
       if (!searchQuery.trim()) return;
       setIsSearching(true);
-      
       try {
           const response = await window.gapi.client.drive.files.list({
               q: `name contains '${searchQuery}' and trashed = false`,
               fields: 'files(id, name, mimeType, size, createdTime, thumbnailLink, parents)',
-              // Add support for shared drives and shared content in search
               supportsAllDrives: true,
               includeItemsFromAllDrives: true
           });
@@ -388,19 +387,13 @@ const App: React.FC = () => {
           }));
 
           setFiles(searchFiles);
-          
-          // Use Gemini for smart filtering if key is present
           if (config?.apiKey) {
             const geminiFilteredIds = await performSmartSearch(searchQuery, searchFiles, config.apiKey);
-            if (geminiFilteredIds.length > 0) {
-                setSearchResults(geminiFilteredIds);
-            } else {
-                setSearchResults(null); // Fallback to showing all Drive text matches
-            }
+            if (geminiFilteredIds.length > 0) setSearchResults(geminiFilteredIds);
+            else setSearchResults(null);
           } else {
              setSearchResults(null);
           }
-
       } catch (e) {
           console.error("Search failed", e);
       } finally {
@@ -408,25 +401,34 @@ const App: React.FC = () => {
       }
   };
 
-  const filteredFiles = useMemo(() => {
+  // Determines what to show based on view
+  const displayItems = useMemo(() => {
+    if (currentView === 'history') {
+        // Render from history cache
+        return history.sort((a,b) => b.timestamp - a.timestamp).map(h => ({
+            id: h.fileId,
+            parentId: null,
+            name: h.name || 'Unknown',
+            mimeType: h.mimeType || 'video/mp4',
+            thumbnail: h.thumbnail,
+            size: h.size,
+            // Add progress info for UI to consume if needed
+            description: `Watched ${Math.round(h.progress/60)}m / ${Math.round(h.duration/60)}m`
+        } as FileSystemItem));
+    }
+    
+    // Default File View
     if (searchResults !== null) {
         return files.filter(f => searchResults.includes(f.id));
-    }
-    if (currentView === 'history') {
-        // Naive history implementation: Show files in current list that are in history
-        // Real app would fetch file metadata for history IDs specifically
-        const historyIds = new Set(history.map(h => h.fileId));
-        return files.filter(f => historyIds.has(f.id));
     }
     return files;
   }, [files, searchResults, currentView, history]);
 
   const breadcrumbs = useMemo(() => {
-      if (currentFolderId === 'root') return [];
+      if (currentFolderId === 'root' || currentView !== 'files') return [];
       return [{ id: currentFolderId, name: folderNameMap[currentFolderId] || 'Folder' }];
-  }, [currentFolderId, folderNameMap]);
+  }, [currentFolderId, folderNameMap, currentView]);
 
-  // Storage calculation for UI
   const storagePercentage = useMemo(() => {
       if (!storageQuota) return 0;
       const limit = parseInt(storageQuota.limit || '0');
@@ -434,8 +436,6 @@ const App: React.FC = () => {
       if (limit === 0) return 0;
       return Math.min(Math.round((usage / limit) * 100), 100);
   }, [storageQuota]);
-
-  // --- RENDER ---
 
   if (!user || !accessToken) {
     return (
@@ -474,37 +474,35 @@ const App: React.FC = () => {
         
         <main className="flex-1 flex flex-col h-full relative w-full bg-slate-900">
             {/* Header */}
-            <header className="h-16 flex items-center justify-between px-4 md:px-8 bg-slate-900 sticky top-0 z-20 border-b border-slate-800/50">
+            <header className="h-16 flex items-center justify-between px-4 md:px-8 bg-slate-900 sticky top-0 z-20 border-b border-slate-800/50 shadow-sm">
                 <div className="flex items-center space-x-2 md:hidden">
                     <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30">CS</div>
                 </div>
 
                 <div className="flex-1 max-w-2xl mx-4 md:mx-0 relative">
-                    <div className="relative group">
-                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                    {currentView === 'files' ? (
+                        <div className="relative group">
+                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input 
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSmartSearch()}
+                                placeholder="Search Drive..."
+                                className="block w-full pl-10 pr-12 py-2.5 border border-transparent rounded-xl leading-5 bg-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
+                            />
+                             <button onClick={handleSmartSearch} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-blue-400">
+                                 {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white/30 border-t-blue-500 rounded-full"></div> : 
+                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>}
+                             </button>
                         </div>
-                        <input 
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSmartSearch()}
-                            placeholder="Search files..."
-                            className="block w-full pl-10 pr-12 py-2.5 border border-transparent rounded-xl leading-5 bg-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
-                        />
-                         <button 
-                            onClick={handleSmartSearch}
-                            disabled={isSearching}
-                            className="absolute inset-y-0 right-0 pr-2 flex items-center"
-                        >
-                             <div className={`p-1.5 rounded-full ${searchQuery ? 'bg-blue-600 text-white' : 'bg-transparent text-slate-500'}`}>
-                                 {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></div> : 
-                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>}
-                             </div>
-                        </button>
-                    </div>
+                    ) : (
+                        <h2 className="text-xl font-semibold text-white tracking-tight">{currentView === 'history' ? 'Watch History' : 'Starred'}</h2>
+                    )}
                 </div>
                 
                  <div className="hidden md:flex items-center space-x-3">
@@ -514,104 +512,117 @@ const App: React.FC = () => {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-8 scroll-smooth">
-                 {/* Storage Dashboard (CX Style) */}
-                 {currentFolderId === 'root' && storageQuota && (
-                     <div className="mb-6 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 shadow-xl border border-slate-700/50 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between">
-                            <div className="mb-4 md:mb-0">
-                                <h2 className="text-lg font-bold text-white mb-1">Storage Analysis</h2>
-                                <p className="text-slate-400 text-xs">Google Drive Usage</p>
+                 {/* CX Style Storage Dashboard */}
+                 {currentView === 'files' && currentFolderId === 'root' && storageQuota && (
+                     <div className="mb-6 bg-slate-800 rounded-xl p-5 shadow-lg border-t border-slate-700/50 relative overflow-hidden">
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 className="text-white font-semibold text-lg">Local (Drive)</h3>
+                                <p className="text-slate-400 text-xs mt-0.5">{formatBytes(parseInt(storageQuota.usage))} used of {formatBytes(parseInt(storageQuota.limit))}</p>
                             </div>
-                            <div className="flex items-end space-x-2">
-                                <span className="text-2xl font-bold text-blue-400">{formatBytes(parseInt(storageQuota.usage))}</span>
-                                <span className="text-sm text-slate-500 mb-1.5">/ {formatBytes(parseInt(storageQuota.limit))}</span>
+                            <div className="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center">
+                                <span className="text-blue-400 font-bold text-sm">{storagePercentage}%</span>
                             </div>
                         </div>
-                        
-                        <div className="mt-4 relative h-3 bg-slate-700/50 rounded-full overflow-hidden">
-                            <div 
-                                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-1000 ease-out"
-                                style={{ width: `${storagePercentage}%` }}
-                            ></div>
+                        {/* CX Gradient Bar */}
+                        <div className="h-4 w-full bg-slate-900 rounded-full overflow-hidden flex">
+                            <div style={{ width: `${storagePercentage}%` }} className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
                         </div>
-                        <div className="flex justify-between mt-2 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-                            <span>Used: {storagePercentage}%</span>
-                            <span>Free: {100 - storagePercentage}%</span>
+                        <div className="mt-3 flex space-x-4 text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                            <div className="flex items-center space-x-1.5">
+                                <div className="w-2 h-2 rounded-full bg-yellow-400"></div><span>Images</span>
+                            </div>
+                            <div className="flex items-center space-x-1.5">
+                                <div className="w-2 h-2 rounded-full bg-orange-500"></div><span>Videos</span>
+                            </div>
+                            <div className="flex items-center space-x-1.5">
+                                <div className="w-2 h-2 rounded-full bg-red-500"></div><span>Files</span>
+                            </div>
                         </div>
                      </div>
                  )}
 
                  {/* Breadcrumbs */}
-                 <div className="flex items-center space-x-2 mb-4 text-sm text-slate-400 overflow-x-auto no-scrollbar py-1">
-                    <button onClick={() => { setCurrentFolderId('root'); setFiles([]); }} className="hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800">My Drive</button>
-                    {breadcrumbs.map((crumb) => (
-                        <React.Fragment key={crumb.id}>
-                            <svg className="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            <span className="text-white font-medium whitespace-nowrap">{crumb.name}</span>
-                        </React.Fragment>
-                    ))}
-                </div>
+                 {currentView === 'files' && (
+                     <div className="flex items-center space-x-2 mb-4 text-sm text-slate-400 overflow-x-auto no-scrollbar py-1">
+                        <button onClick={() => { setCurrentFolderId('root'); setFiles([]); }} className="hover:text-white transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-slate-800 flex items-center space-x-1">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                            <span>/</span>
+                        </button>
+                        {breadcrumbs.map((crumb) => (
+                            <React.Fragment key={crumb.id}>
+                                <span className="text-slate-600">/</span>
+                                <span className="text-white font-medium whitespace-nowrap">{crumb.name}</span>
+                            </React.Fragment>
+                        ))}
+                    </div>
+                 )}
 
                 {isLoadingFiles ? (
                     <div className="flex justify-center items-center h-64">
                         <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
-                ) : filteredFiles.length === 0 ? (
+                ) : displayItems.length === 0 ? (
                      <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-                        <svg className="w-16 h-16 mb-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" /></svg>
-                        <p>No files found</p>
+                        <svg className="w-16 h-16 mb-4 text-slate-700 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" /></svg>
+                        <p>Empty Folder</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                        {filteredFiles.map((file) => {
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {displayItems.map((file) => {
                              const type = getFileType(file.mimeType);
                              const historyItem = history.find(h => h.fileId === file.id);
                              const progressPercent = historyItem ? (historyItem.progress / historyItem.duration) * 100 : 0;
                              
-                             // CX-Like Color Coding for Icons/Cards
-                             let cardBorderColor = "border-slate-800";
-                             let iconColor = "text-slate-400";
-                             if (type === FileType.FOLDER) { cardBorderColor = "hover:border-yellow-500/50"; iconColor = "text-yellow-400"; }
-                             else if (type === FileType.VIDEO) { cardBorderColor = "hover:border-red-500/50"; iconColor = "text-red-400"; }
-                             else if (type === FileType.IMAGE) { cardBorderColor = "hover:border-purple-500/50"; iconColor = "text-purple-400"; }
+                             // CX Style Icons
+                             let IconComp = ICONS[type] || ICONS[FileType.DOCUMENT];
+                             let iconColorClass = "text-slate-400";
+                             let bgColorClass = "bg-slate-800";
+                             
+                             if (type === FileType.FOLDER) {
+                                 iconColorClass = "text-yellow-400";
+                                 // CX folders are usually solid yellow icons
+                             } else if (type === FileType.VIDEO) {
+                                 iconColorClass = "text-blue-400";
+                             } else if (type === FileType.IMAGE) {
+                                 iconColorClass = "text-purple-400";
+                             }
 
                              return (
                                 <div 
                                     key={file.id}
                                     onClick={() => handleFileClick(file)}
-                                    className={`group relative bg-slate-800/60 rounded-xl p-3 border ${cardBorderColor} hover:bg-slate-800 transition-all cursor-pointer shadow-sm hover:shadow-lg flex flex-col active:scale-95 duration-150`}
+                                    className={`group relative ${bgColorClass} rounded-lg p-3 hover:bg-slate-700 transition-colors cursor-pointer shadow-sm flex flex-col items-center text-center`}
                                 >
-                                     <div className="aspect-[4/3] w-full rounded-lg bg-slate-900/50 mb-3 overflow-hidden flex items-center justify-center relative border border-slate-700/30">
+                                     <div className="w-full aspect-[5/4] mb-2 flex items-center justify-center overflow-hidden rounded bg-black/20 relative">
                                         {file.thumbnail ? (
                                              <>
-                                                <img src={file.thumbnail} alt={file.name} className="w-full h-full object-cover transition-opacity duration-300" referrerPolicy="no-referrer" />
-                                                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-colors">
-                                                    {type === FileType.VIDEO && (
-                                                         <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
-                                                            <svg className="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                                         </div>
-                                                    )}
-                                                </div>
+                                                <img src={file.thumbnail} alt={file.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                                {type === FileType.VIDEO && (
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                        <svg className="w-8 h-8 text-white drop-shadow-lg opacity-80" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                    </div>
+                                                )}
                                              </>
                                         ) : (
-                                            <div className={`transform group-hover:scale-110 transition-transform duration-300 ${iconColor}`}>
-                                                {ICONS[type] || ICONS['DOCUMENT']}
+                                            <div className={`w-12 h-12 ${iconColorClass}`}>
+                                                {IconComp}
                                             </div>
                                         )}
-
+                                        
+                                        {/* Progress Bar for Videos */}
                                         {type === FileType.VIDEO && progressPercent > 0 && (
-                                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-700/50">
+                                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
                                                 <div className="h-full bg-red-500" style={{ width: `${progressPercent}%` }}></div>
                                             </div>
                                         )}
                                      </div>
-                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-sm font-medium text-slate-200 truncate group-hover:text-white transition-colors">{file.name}</h3>
-                                        <div className="flex items-center justify-between mt-1.5">
-                                            <span className="text-[10px] text-slate-500 bg-slate-900/50 px-1.5 py-0.5 rounded">{file.size || 'Folder'}</span>
-                                            {/* Type Indicator Dot */}
-                                            <div className={`w-1.5 h-1.5 rounded-full ${type === FileType.FOLDER ? 'bg-yellow-500' : type === FileType.VIDEO ? 'bg-red-500' : 'bg-slate-600'}`}></div>
+                                     
+                                     <div className="w-full">
+                                        <h3 className="text-xs font-medium text-slate-200 truncate leading-tight mb-1">{file.name}</h3>
+                                        <div className="flex justify-center items-center space-x-2 text-[10px] text-slate-500">
+                                            {file.size && <span>{file.size}</span>}
+                                            {currentView === 'history' && file.description && <span className="text-blue-400">{file.description}</span>}
                                         </div>
                                      </div>
                                 </div>
@@ -629,7 +640,7 @@ const App: React.FC = () => {
             currentView={currentView}
             onChangeView={(view) => {
                 setCurrentView(view);
-                setCurrentFolderId('root');
+                if (view === 'files') setCurrentFolderId('root');
             }}
         />
 

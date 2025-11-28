@@ -14,16 +14,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // We construct a direct stream URL using the Drive API endpoint and the access token.
-  // added &acknowledgeAbuse=true to bypass the virus scan warning for large files which blocks playback.
+  // Direct stream URL with abuse acknowledgment
   const videoSrc = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&access_token=${accessToken}&acknowledgeAbuse=true`;
 
   // Android Intent URL for MX Player or other external players
-  // Format: intent:{url}#Intent;type={mimeType};S.title={title};end
+  // This explicitly asks for type=video/* and passes the title
+  const intentUrl = `intent:${videoSrc}#Intent;type=${file.mimeType || 'video/*'};S.title=${encodeURIComponent(file.name)};end`;
+  
   const isAndroid = /Android/i.test(navigator.userAgent);
-  const intentUrl = `intent:${videoSrc}#Intent;type=${file.mimeType};S.title=${encodeURIComponent(file.name)};end`;
 
-  // Set initial time once metadata is loaded
   const handleLoadedMetadata = () => {
       setIsLoading(false);
       if (videoRef.current && initialProgress > 0) {
@@ -38,7 +37,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
   };
 
   useEffect(() => {
-      // Cleanup on unmount
       return () => {
           saveProgress();
       };
@@ -48,14 +46,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center animate-fade-in">
         {/* Header Overlay */}
-        <div className="absolute top-0 left-0 w-full p-4 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-center z-10">
-            <h2 className="text-white font-medium truncate pr-4 text-sm md:text-base">{file.name}</h2>
+        <div className="absolute top-0 left-0 w-full p-4 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-center z-10 pointer-events-none">
+            <h2 className="text-white font-medium truncate pr-4 text-sm md:text-base pointer-events-auto">{file.name}</h2>
             <button 
                 onClick={() => {
                     saveProgress();
                     onClose();
                 }}
-                className="bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors"
+                className="bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors pointer-events-auto"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -70,28 +68,30 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
         )}
 
         {error && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-4 text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-4 text-center bg-slate-900">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-red-500 mb-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                 </svg>
-                <p className="text-white text-lg font-medium mb-2">Playback Error</p>
-                <p className="text-slate-400 max-w-md text-sm">{error}</p>
-                <div className="flex space-x-4 mt-6">
-                    <button 
-                        onClick={onClose}
-                        className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700"
-                    >
-                        Close
-                    </button>
-                    {isAndroid && (
+                <p className="text-white text-lg font-medium mb-2">Format Not Supported</p>
+                <p className="text-slate-400 max-w-md text-sm mb-6">
+                    This video format might not play in the browser. Try opening it in MX Player.
+                </p>
+                <div className="flex flex-col space-y-3 w-full max-w-xs">
+                     {isAndroid && (
                          <a 
                             href={intentUrl}
-                            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center space-x-2"
+                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center space-x-2 font-medium"
                         >
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                             <span>Open in MX Player</span>
                         </a>
                     )}
+                    <button 
+                        onClick={onClose}
+                        className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700"
+                    >
+                        Close
+                    </button>
                 </div>
             </div>
         )}
@@ -109,26 +109,25 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ file, initialProgress, access
                     onError={(e) => {
                         console.error("Video Error:", e);
                         setIsLoading(false);
-                        setError("Unable to play in browser. Large files or specific formats (MKV, AVI) often fail in browsers.");
+                        setError("Video failed to play.");
                     }}
                 >
                 Your browser does not support the video tag.
                 </video>
-                
-                {/* External Player FAB for Android */}
-                {isAndroid && !isLoading && (
-                    <a 
-                        href={intentUrl}
-                        className="absolute bottom-20 right-6 bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-lg shadow-black/50 flex items-center space-x-2 z-20"
-                        title="Open in External Player"
-                    >
-                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                        </svg>
-                        <span className="font-medium text-sm">External Player</span>
-                    </a>
-                )}
             </div>
+        )}
+        
+        {/* Floating Action Button for External Player (Always visible on Android) */}
+        {isAndroid && !isLoading && !error && (
+            <a 
+                href={intentUrl}
+                className="absolute bottom-20 right-6 bg-blue-600 hover:bg-blue-500 text-white p-3 md:p-4 rounded-full shadow-lg shadow-black/50 flex items-center space-x-2 z-50 transition-transform active:scale-95"
+                title="Open in External Player"
+            >
+                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                </svg>
+            </a>
         )}
     </div>
   );
