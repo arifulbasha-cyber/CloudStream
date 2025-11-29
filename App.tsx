@@ -171,14 +171,14 @@ const App: React.FC = () => {
           // Re-init with explicit ID just in case
           initNativeAuth(config.clientId);
           
-          const response = await nativeSignIn();
+          const resp: any = await nativeSignIn();
           
-          if (response.authentication.accessToken) {
-            const token = response.authentication.accessToken;
+          if (resp?.authentication?.accessToken) {
+            const token = resp.authentication.accessToken;
             const u: User = { 
-                name: response.displayName || response.givenName || 'User',
-                email: response.email,
-                picture: response.imageUrl 
+                name: resp.displayName || resp.givenName || 'User',
+                email: resp.email,
+                picture: resp.imageUrl 
             };
             
             setAccessToken(token);
