@@ -43,12 +43,31 @@ jobs:
       - name: Build Debug APK
         run: cd android && ./gradlew assembleDebug
 
+      - name: Ensure debug keystore exists
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            echo "Generating debug keystore at ~/.android/debug.keystore"
+            keytool -genkeypair \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -keystore ~/.android/debug.keystore \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US"
+          else
+            echo "Debug keystore already exists"
+          fi
+
       - name: 🔑 GET SHA-1 FINGERPRINT
         run: |
           echo "========================================================"
           echo "   COPY THE SHA-1 BELOW FOR GOOGLE CLOUD CONSOLE"
           echo "========================================================"
-          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep "SHA1:"
+          # Print SHA1; if grep finds nothing, echo a helpful message (avoid failing the job)
+          keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>/dev/null | grep "SHA1:" || echo "SHA1 not found (keystore may be missing or alias different)"
           echo "========================================================"
           echo "Package Name: com.cloudstream.explorer"
           echo "========================================================"
