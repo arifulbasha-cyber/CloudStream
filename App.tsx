@@ -29,15 +29,26 @@ function getDisplayName(user: User | null): string {
 
 const SettingsModal: React.FC<{ 
     onClose: () => void, 
-    onSave: (config: DriveConfig) => void,
+    onSave: (config: DriveConfig & Record<string, any>) => void,
     initialConfig: DriveConfig | null 
 }> = ({ onClose, onSave, initialConfig }) => {
-    const [clientId, setClientId] = useState(initialConfig?.clientId || '');
-    const [apiKey, setApiKey] = useState(initialConfig?.apiKey || '');
+    // Backwards-compatible: initialConfig may only have clientId + apiKey; we support androidClientId + webClientId too.
+    const initial = initialConfig as any;
+    const [androidClientId, setAndroidClientId] = useState(initial?.androidClientId || '');
+    const [webClientId, setWebClientId] = useState(initial?.clientId || initial?.webClientId || '');
+    const [apiKey, setApiKey] = useState(initial?.apiKey || '');
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (clientId && apiKey) onSave({ clientId, apiKey });
+        if ((androidClientId || webClientId) && apiKey) {
+            // Save a shape compatible with existing code: keep `clientId` for webClientId for backwards compatibility
+            const cfg: any = { clientId: webClientId || androidClientId, apiKey };
+            if (androidClientId) cfg.androidClientId = androidClientId;
+            if (webClientId) cfg.webClientId = webClientId;
+            onSave(cfg);
+        } else {
+            alert("Please provide an API Key and at least one Client ID (Android or Web).");
+        }
     };
 
     return (
@@ -46,17 +57,40 @@ const SettingsModal: React.FC<{
                 <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
                 <h2 className="text-xl font-bold text-white mb-4">API Configuration</h2>
                 <p className="text-xs text-slate-400 mb-4">
-                    Please enter your Google Cloud Project credentials.
+                    Enter credentials from Google Cloud Console.
+                    For Android native sign-in use the Android OAuth Client (package: com.cloudstream.explorer, SHA-1 shown in console).
+                    For web/testing, provide a Web Client ID (optional).
                 </p>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Client ID</label>
-                        <input type="text" value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-400 outline-none" />
+                        <label className="block text-xs font-medium text-slate-400 mb-1">Android Client ID (OAuth)</label>
+                        <input
+                          type="text"
+                          value={androidClientId}
+                          onChange={(e) => setAndroidClientId(e.target.value)}
+                          placeholder="e.g. 12345-xxxx.apps.googleusercontent.com"
+                          className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-400 outline-none"
+                        />
+                        <p className="text-[11px] text-slate-500 mt-1">Use the Android OAuth client with package name com.cloudstream.explorer and your SHA-1 fingerprint.</p>
                     </div>
+
+                    <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-1">Web Client ID (optional)</label>
+                        <input
+                          type="text"
+                          value={webClientId}
+                          onChange={(e) => setWebClientId(e.target.value)}
+                          placeholder="e.g. 12345-xxxx.apps.googleusercontent.com"
+                          className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-400 outline-none"
+                        />
+                        <p className="text-[11px] text-slate-500 mt-1">If you test sign-in in the browser using gapi, provide the Web client ID and configure authorized origins.</p>
+                    </div>
+
                     <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">API Key</label>
                         <input type="text" value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="w-full px-4 py-2 rounded bg-[#263238] border border-slate-600 text-white focus:border-blue-400 outline-none" />
                     </div>
+
                     <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded shadow-lg">Save</button>
                 </form>
             </div>
@@ -124,6 +158,7 @@ const App: React.FC = () => {
   const [playingFile, setPlayingFile] = useState<FileSystemItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<string[] | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // --- Init Logic ---
   useEffect(() => {
@@ -134,7 +169,9 @@ const App: React.FC = () => {
     let effectiveConfig = APP_CONFIG.CLIENT_ID ? { clientId: APP_CONFIG.CLIENT_ID, apiKey: APP_CONFIG.API_KEY } : (savedConfig ? JSON.parse(savedConfig) : null);
 
     // Initialize Native Auth with Client ID if available
-    if (effectiveConfig?.clientId) {
+    if ((effectiveConfig as any)?.androidClientId) {
+        initNativeAuth((effectiveConfig as any).androidClientId);
+    } else if (effectiveConfig?.clientId) {
         initNativeAuth(effectiveConfig.clientId);
     }
 
@@ -167,15 +204,29 @@ const App: React.FC = () => {
   const handleLogin = async () => {
       if (!config) { setShowSettings(true); return; }
       
+      setIsLoggingIn(true);
       try {
-          // Re-init with explicit ID just in case
-          initNativeAuth(config.clientId);
+          // Re-init with explicit Android Client ID if provided (fallback to clientId)
+          const androidClientId = (config as any).androidClientId || (config as any).clientId;
+          if (androidClientId) {
+            try {
+              initNativeAuth(androidClientId);
+            } catch (e) {
+              console.warn("initNativeAuth error:", e);
+            }
+          } else {
+            console.warn("No androidClientId provided in config");
+          }
           
           const resp: any = await nativeSignIn();
-          
+
+          // Debugging: log entire response to help diagnose failures
+          console.debug("nativeSignIn response:", resp);
+
           if (resp?.authentication?.accessToken) {
             const token = resp.authentication.accessToken;
             const u: User = { 
+                // Some providers use displayName, some use givenName; preserve both
                 name: resp.displayName || resp.givenName || 'User',
                 email: resp.email,
                 picture: resp.imageUrl 
@@ -188,20 +239,27 @@ const App: React.FC = () => {
             
             localStorage.setItem('accessToken', token);
             localStorage.setItem('user', JSON.stringify(u));
+            setIsLoggingIn(false);
+          } else {
+            // Provide useful error details to the developer / user
+            console.error("Login response missing accessToken:", resp);
+            alert("Login failed - see console for details. Please verify your Android Client ID (package name, SHA-1) and that the OAuth client is in the same Google Cloud project and Drive API is enabled.");
+            setIsLoggingIn(false);
           }
-      } catch (e) {
+      } catch (e: any) {
           console.error("Login failed", e);
-          alert("Login failed. Please check your Client ID configuration.");
+          alert("Login failed. Please check your Client ID configuration. Error: " + (e?.message || JSON.stringify(e)));
+          setIsLoggingIn(false);
       }
   };
   
-  const handleSaveConfig = (newConfig: DriveConfig) => {
+  const handleSaveConfig = (newConfig: DriveConfig & Record<string, any>) => {
       localStorage.setItem('driveConfig', JSON.stringify(newConfig));
-      setConfig(newConfig);
+      setConfig(newConfig as any);
       setShowSettings(false);
       // Re-initialize services with new config
-      initNativeAuth(newConfig.clientId);
-      initGapi(newConfig.apiKey).catch(console.error);
+      if (newConfig.androidClientId) initNativeAuth(newConfig.androidClientId);
+      if (newConfig.apiKey) initGapi(newConfig.apiKey).catch(console.error);
   };
 
   const handleLogout = async () => {
@@ -388,7 +446,7 @@ const App: React.FC = () => {
         <>
             <LoginScreen 
                 onLogin={handleLogin} 
-                isLoading={false} 
+                isLoading={isLoggingIn} 
                 onOpenSettings={() => setShowSettings(true)} 
                 isConfigured={!!config} 
             />
